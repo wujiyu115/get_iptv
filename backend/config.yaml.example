@@ -1,0 +1,37 @@
+environment: production
+server:
+  port: 5180
+schedule:
+  update_mode: interval        # interval | time
+  update_interval: 12
+  update_times: []
+  update_startup: true
+  time_zone: Asia/Shanghai
+fetch:
+  user_agent: ""
+  request_timeout: 10
+  retries: 2
+  http_proxy: ""
+check:
+  http_timeout: 6
+  http_workers: 70
+  ffprobe_enabled: true
+  ffprobe_timeout: 10
+  ffprobe_workers: 25
+filter:
+  urls_limit: 5
+  min_resolution: 1280x720
+  min_speed: 0.5
+  sort_by: resolution,speed
+  open_filter_ad: true
+  open_history: true
+output:
+  dir: ./output
+  open_epg: true
+  logo_url: ""
+  open_url_info: false
+logging:
+  level: INFO
+  log_dir: logs
+db:
+  path: ./data/iptv.db
