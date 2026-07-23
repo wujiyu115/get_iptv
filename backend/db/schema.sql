@@ -1,0 +1,51 @@
+CREATE TABLE IF NOT EXISTS sources (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  type TEXT NOT NULL CHECK(type IN ('m3u','txt')),
+  enabled INTEGER NOT NULL DEFAULT 1,
+  use_proxy INTEGER NOT NULL DEFAULT 0,
+  sort INTEGER NOT NULL DEFAULT 0,
+  note TEXT DEFAULT '',
+  fail_count INTEGER NOT NULL DEFAULT 0,
+  last_ok_at TEXT
+);
+CREATE TABLE IF NOT EXISTS aliases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  canonical TEXT NOT NULL,
+  pattern TEXT NOT NULL,
+  is_regex INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  canonical TEXT NOT NULL,
+  group_title TEXT DEFAULT '',
+  logo TEXT DEFAULT '',
+  sort INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  status TEXT NOT NULL CHECK(status IN ('running','done','failed')),
+  stats_json TEXT DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS channels (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  group_title TEXT DEFAULT '',
+  url TEXT NOT NULL,
+  logo TEXT DEFAULT '',
+  tvg_id TEXT DEFAULT '',
+  tvg_name TEXT DEFAULT '',
+  source TEXT DEFAULT '',
+  status TEXT DEFAULT '',
+  detail TEXT DEFAULT '',
+  resolution INTEGER DEFAULT 0,
+  speed REAL DEFAULT 0,
+  delay REAL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_channels_run ON channels(run_id);
