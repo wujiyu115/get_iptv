@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+data/
+output/
+logs/
+sources/
+.qoder/
+.superpowers/
+backend/config.yaml
+bun.lock
