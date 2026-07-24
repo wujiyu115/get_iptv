@@ -72,10 +72,14 @@ def write_all(entries, out_dir, *, epg_urls=None, open_epg=True,
         "compact.m3u": build_compact_m3u(entries, epg_urls=epg, open_url_info=open_url_info),
         "iptv.txt": build_txt(entries),
     }
+    # atomic swap: write .tmp then os.replace, so the previous result stays
+    # served intact until the new one is fully written on success.
     paths = {}
     for name, content in files.items():
         p = os.path.join(out_dir, name)
-        with open(p, "w", encoding="utf-8") as f:
+        tmp = p + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             f.write(content)
+        os.replace(tmp, p)
         paths[name] = p
     return paths
