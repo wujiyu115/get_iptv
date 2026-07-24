@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { runTask, getStatus, getSchedule, setSchedule, logsUrl } from '../api';
 import type { Schedule } from '../types';
+import { Play } from '../icons';
 import HelpTip from './HelpTip';
+
+function LogLine({ raw }: { raw: string }) {
+  const sp = raw.indexOf(' ');
+  const ts = sp > 0 ? raw.slice(0, sp) : '';
+  const msg = sp > 0 ? raw.slice(sp + 1) : raw;
+  const cls = /FAIL/i.test(msg) ? 'fail'
+    : /(\bok\b|reachable|playable|done|✓)/i.test(msg) ? 'ok'
+      : /stage:/i.test(msg) ? 'info' : '';
+  return <div><span className="t">{ts}</span>  <span className={cls}>{msg}</span></div>;
+}
 
 export default function TaskPanel() {
   const [logs, setLogs] = useState<string[]>([]);
@@ -29,49 +40,70 @@ export default function TaskPanel() {
   };
   const saveSched = async () => { if (sched) { await setSchedule(sched); alert('已保存'); } };
 
+  const running = status === 'running';
+  const pillCls = running ? '' : status === 'failed' ? 'fail' : 'idle';
+
   return (
     <>
       <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="btn primary" onClick={run} disabled={status === 'running'}>
-            {status === 'running' ? '运行中…' : '立即运行'}
-          </button>
-          <span>状态: {status}</span>
-          {stage && <span className="seg"><button className="active">{stage}</button></span>}
+        <div className="card-head">
+          <div className="toolbar" style={{ flex: 1 }}>
+            <button className="btn btn-primary" onClick={run} disabled={running}>
+              <Play /> {running ? '运行中…' : '运行一次'}
+            </button>
+            <span className={`pill-run ${pillCls}`} style={{ marginLeft: 'auto' }}>
+              {running && <span className="pulse" />}
+              状态：{status}{stage ? ` · ${stage}` : ''}
+            </span>
+          </div>
         </div>
-        <div ref={logRef} className="logs" style={{ marginTop: 12 }}>
-          {logs.join('\n')}
+        <div className="card-body">
+          <div className="console mono" ref={logRef} role="log" aria-live="polite">
+            {logs.map((l, i) => <LogLine key={i} raw={l} />)}
+          </div>
         </div>
       </div>
+
       {sched && (
         <div className="card">
-          <h3>调度设置<HelpTip id="task" /></h3>
-          <div style={{ display: 'grid', gap: 10, maxWidth: 420 }}>
-            <label>模式
-              <select value={sched.update_mode}
-                onChange={e => setSched({ ...sched, update_mode: e.target.value as 'interval' | 'time' })}>
-                <option value="interval">interval（间隔小时）</option>
-                <option value="time">time（每日定点）</option>
-              </select>
-            </label>
-            {sched.update_mode === 'interval' ? (
-              <label>间隔(小时)
-                <input type="number" value={sched.update_interval}
-                  onChange={e => setSched({ ...sched, update_interval: Number(e.target.value) })} />
+          <div className="card-head"><h2>调度设置</h2><HelpTip id="task" /></div>
+          <div className="card-body">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 18 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>模式</span>
+                <select className="inp" value={sched.update_mode}
+                  onChange={e => setSched({ ...sched, update_mode: e.target.value as 'interval' | 'time' })}>
+                  <option value="interval">interval · 间隔小时</option>
+                  <option value="time">time · 每日定点</option>
+                </select>
               </label>
-            ) : (
-              <label>定点(逗号分隔 HH:MM)
-                <input value={sched.update_times.join(',')}
-                  onChange={e => setSched({ ...sched, update_times: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} />
+              {sched.update_mode === 'interval' ? (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>间隔（小时）</span>
+                  <input className="inp mono" type="number" value={sched.update_interval}
+                    onChange={e => setSched({ ...sched, update_interval: Number(e.target.value) })} />
+                </label>
+              ) : (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>定点（逗号分隔 HH:MM）</span>
+                  <input className="inp mono" value={sched.update_times.join(',')}
+                    onChange={e => setSched({ ...sched, update_times: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} />
+                </label>
+              )}
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>时区</span>
+                <input className="inp" value={sched.time_zone}
+                  onChange={e => setSched({ ...sched, time_zone: e.target.value })} />
               </label>
-            )}
-            <label>时区
-              <input value={sched.time_zone}
-                onChange={e => setSched({ ...sched, time_zone: e.target.value })} />
+            </div>
+            <label className="switch" style={{ marginTop: 20 }}>
+              <input type="checkbox" checked={sched.update_startup}
+                onChange={e => setSched({ ...sched, update_startup: e.target.checked })} />
+              <span className="track" />启动即跑
             </label>
-            <label><input type="checkbox" checked={sched.update_startup}
-              onChange={e => setSched({ ...sched, update_startup: e.target.checked })} /> 启动即跑</label>
-            <button className="btn" onClick={saveSched}>保存调度</button>
+            <div style={{ marginTop: 22 }}>
+              <button className="btn btn-primary" onClick={saveSched}>保存调度</button>
+            </div>
           </div>
         </div>
       )}

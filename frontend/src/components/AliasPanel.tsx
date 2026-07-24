@@ -22,28 +22,40 @@ export default function AliasPanel() {
 
   return (
     <div className="card">
-      <h3>频道别名（归一）<HelpTip id="aliases" /></h3>
-      <table>
-        <thead><tr><th>规范名 canonical</th><th>匹配 pattern</th><th>正则</th><th></th></tr></thead>
-        <tbody>
-          {rows.map(a => (
-            <tr key={a.id}>
-              <td>{a.canonical}</td><td>{a.pattern}</td>
-              <td><input type="checkbox" checked={!!a.is_regex} onChange={() => toggleRegex(a)} /></td>
-              <td><button className="btn danger" onClick={() => remove(a.id)}><Trash /></button></td>
+      <div className="card-head">
+        <h2>频道别名 · 归一</h2><HelpTip id="aliases" />
+        <span className="badge badge-count">{rows.length}</span>
+      </div>
+      <div className="card-body flush">
+        <table className="tbl responsive">
+          <thead>
+            <tr><th>规范名 canonical</th><th>匹配 pattern</th><th className="center">正则</th><th></th></tr>
+          </thead>
+          <tbody>
+            {rows.map(a => (
+              <tr key={a.id}>
+                <td data-label="规范名" className="name-strong">{a.canonical}</td>
+                <td data-label="pattern" className="url">{a.pattern}</td>
+                <td data-label="正则" className="center">
+                  <input type="checkbox" className="chk" checked={!!a.is_regex}
+                    onChange={() => toggleRegex(a)} /></td>
+                <td style={{ textAlign: 'right' }}>
+                  <button className="icon-trash" onClick={() => remove(a.id)} aria-label="删除"><Trash /></button></td>
+              </tr>
+            ))}
+            <tr className="row-add">
+              <td data-label="规范名"><input className="inp" value={draft.canonical} placeholder="CCTV1"
+                onChange={e => setDraft({ ...draft, canonical: e.target.value })} /></td>
+              <td data-label="pattern"><input className="inp mono" value={draft.pattern} placeholder="^CCTV[-\s]?1"
+                onChange={e => setDraft({ ...draft, pattern: e.target.value })} /></td>
+              <td className="center"><input type="checkbox" className="chk" checked={!!draft.is_regex}
+                onChange={e => setDraft({ ...draft, is_regex: e.target.checked ? 1 : 0 })} /></td>
+              <td style={{ textAlign: 'right' }}>
+                <button className="btn-icon-add" onClick={add} aria-label="添加别名"><Plus /></button></td>
             </tr>
-          ))}
-          <tr>
-            <td><input value={draft.canonical} placeholder="CCTV1"
-              onChange={e => setDraft({ ...draft, canonical: e.target.value })} /></td>
-            <td><input value={draft.pattern} placeholder="^CCTV[-\\s]?1"
-              onChange={e => setDraft({ ...draft, pattern: e.target.value })} /></td>
-            <td><input type="checkbox" checked={!!draft.is_regex}
-              onChange={e => setDraft({ ...draft, is_regex: e.target.checked ? 1 : 0 })} /></td>
-            <td><button className="btn primary" onClick={add}><Plus /></button></td>
-          </tr>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

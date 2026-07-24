@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { listChannels, playlistUrls } from '../api';
 import type { Channel } from '../types';
-import { Play, Copy } from '../icons';
+import { Play, Copy, Search, Caret } from '../icons';
 import PlayerOverlay from './PlayerOverlay';
 import HelpTip from './HelpTip';
 
@@ -10,16 +10,26 @@ export default function ChannelsPanel() {
   const [playing, setPlaying] = useState<Channel | null>(null);
   const [q, setQ] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [copied, setCopied] = useState('');
   const urls = playlistUrls();
 
+  useEffect(() => { listChannels('latest').then(setRows); }, []);
+
+  const copy = (path: string) => {
+    navigator.clipboard.writeText(location.origin + path);
+    setCopied(path);
+    setTimeout(() => setCopied(c => (c === path ? '' : c)), 1200);
+  };
   const toggle = (g: string) => setCollapsed(prev => {
     const next = new Set(prev);
     next.has(g) ? next.delete(g) : next.add(g);
     return next;
   });
-
-  useEffect(() => { listChannels('latest').then(setRows); }, []);
-  const copy = (path: string) => navigator.clipboard.writeText(location.origin + path);
+  const meta = (c: Channel) => [
+    c.resolution ? c.resolution + 'p' : '—',
+    c.speed ? `${c.speed} Mb/s` : null,
+    c.status,
+  ].filter(Boolean).join(' · ');
 
   const kw = q.trim().toLowerCase();
   const shown = kw
@@ -38,42 +48,60 @@ export default function ChannelsPanel() {
   return (
     <>
       <div className="card">
-        <h3>订阅地址<HelpTip id="channels" /></h3>
-        {(['full', 'compact', 'txt'] as const).map(k => (
-          <div key={k} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-            <code style={{ flex: 1 }}>{location.origin + urls[k]}</code>
-            <button className="btn" onClick={() => copy(urls[k])}><Copy /></button>
+        <div className="card-head"><h2>订阅地址</h2><HelpTip id="channels" /></div>
+        <div className="card-body flush">
+          <div className="sub-list">
+            {(['full', 'compact', 'txt'] as const).map(k => (
+              <div key={k} className="sub-row">
+                <span className="url">{location.origin + urls[k]}</span>
+                <button className={`copy-btn ${copied === urls[k] ? 'copied' : ''}`}
+                  onClick={() => copy(urls[k])} aria-label="复制地址"><Copy /></button>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
+
       <div className="card">
-        <h3>频道（{shown.length}/{rows.length}）</h3>
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="搜索频道/分组…"
-          style={{ width: '100%', marginBottom: 12, boxSizing: 'border-box' }} />
-        {groups.map(([g, list]) => (
-          <div key={g} style={{ marginBottom: 18 }}>
-            <div onClick={() => toggle(g)}
-              style={{ fontWeight: 600, margin: '4px 0 8px', color: 'var(--fg2)',
-                cursor: 'pointer', userSelect: 'none' }}>
-              {collapsed.has(g) ? '▸' : '▾'} {g}（{list.length}）
-            </div>
-            {!collapsed.has(g) && <div className="grid-ch">
-              {list.map(c => (
-                <div key={c.id} className="card" style={{ margin: 0 }}>
-                  <div style={{ fontWeight: 600 }}>{c.name}</div>
-                  <div style={{ color: 'var(--fg2)', fontSize: 12 }}>
-                    {c.resolution ? c.resolution + 'p' : '—'}
-                    {c.speed ? ` · ${c.speed}M/s` : ''} · {c.status}
-                  </div>
-                  <button className="btn primary" style={{ marginTop: 8 }}
-                    onClick={() => setPlaying(c)}><Play /> 试播</button>
-                </div>
-              ))}
-            </div>}
+        <div className="card-head">
+          <h2>频道</h2>
+          <span className="badge badge-count">{shown.length} / {rows.length}</span>
+        </div>
+        <div className="card-body">
+          <div className="search-bar" style={{ marginBottom: 20 }}>
+            <Search />
+            <input className="inp" type="search" value={q} placeholder="搜索频道名 / 分组…"
+              onChange={e => setQ(e.target.value)} aria-label="搜索频道名或分组" />
           </div>
-        ))}
+          {groups.map(([g, list]) => {
+            const off = collapsed.has(g);
+            return (
+              <div key={g}>
+                <div className={`group-title ${off ? 'collapsed' : ''}`} onClick={() => toggle(g)}>
+                  <Caret />{g} <span className="cnt">({list.length})</span>
+                </div>
+                {!off && (
+                  <div className="ch-grid">
+                    {list.map(c => (
+                      <div key={c.id} className="ch-card">
+                        <div className="ch-name">{c.name}</div>
+                        <div className="ch-meta">{meta(c)}</div>
+                        <div className="ch-foot">
+                          <span />
+                          <button className="ch-play" onClick={() => setPlaying(c)}>
+                            <Play />试看</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {shown.length === 0 && <div className="no-result">没有匹配的频道</div>}
+        </div>
       </div>
+
       {playing && <PlayerOverlay url={playing.url} name={playing.name}
         onClose={() => setPlaying(null)} />}
     </>

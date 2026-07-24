@@ -19,31 +19,41 @@ export default function TemplatePanel() {
 
   return (
     <div className="card">
-      <h3>频道模板菜单（空=收录全部）<HelpTip id="templates" /></h3>
-      <table>
-        <thead><tr><th>频道</th><th>分组</th><th>台标</th><th>排序</th><th></th></tr></thead>
-        <tbody>
-          {rows.map(t => (
-            <tr key={t.id}>
-              <td>{t.canonical}</td><td>{t.group_title}</td>
-              <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.logo}</td>
-              <td>{t.sort}</td>
-              <td><button className="btn danger" onClick={() => remove(t.id)}><Trash /></button></td>
+      <div className="card-head">
+        <h2>频道模板菜单</h2><HelpTip id="templates" />
+        <span className="card-head hint" style={{ padding: 0, marginLeft: 'auto' }}>留空 = 收录全部</span>
+      </div>
+      <div className="card-body flush">
+        <table className="tbl responsive">
+          <thead>
+            <tr><th>频道</th><th>分组</th><th>台标</th><th className="num">顺序</th><th></th></tr>
+          </thead>
+          <tbody>
+            {rows.map(t => (
+              <tr key={t.id}>
+                <td data-label="频道" className="name-strong">{t.canonical}</td>
+                <td data-label="分组"><span className="badge badge-type">{t.group_title}</span></td>
+                <td data-label="台标" className="url">{t.logo}</td>
+                <td data-label="顺序" className="num mono">{t.sort}</td>
+                <td style={{ textAlign: 'right' }}>
+                  <button className="icon-trash" onClick={() => remove(t.id)} aria-label="删除"><Trash /></button></td>
+              </tr>
+            ))}
+            <tr className="row-add">
+              <td data-label="频道"><input className="inp" value={draft.canonical} placeholder="CCTV1"
+                onChange={e => setDraft({ ...draft, canonical: e.target.value })} /></td>
+              <td data-label="分组"><input className="inp" value={draft.group_title} placeholder="央视"
+                onChange={e => setDraft({ ...draft, group_title: e.target.value })} /></td>
+              <td data-label="台标"><input className="inp mono" value={draft.logo} placeholder="http://logo…"
+                onChange={e => setDraft({ ...draft, logo: e.target.value })} /></td>
+              <td data-label="顺序"><input className="inp mono" type="number" value={draft.sort} style={{ maxWidth: 80 }}
+                onChange={e => setDraft({ ...draft, sort: Number(e.target.value) })} /></td>
+              <td style={{ textAlign: 'right' }}>
+                <button className="btn-icon-add" onClick={add} aria-label="添加模板行"><Plus /></button></td>
             </tr>
-          ))}
-          <tr>
-            <td><input value={draft.canonical} placeholder="CCTV1"
-              onChange={e => setDraft({ ...draft, canonical: e.target.value })} /></td>
-            <td><input value={draft.group_title} placeholder="央视"
-              onChange={e => setDraft({ ...draft, group_title: e.target.value })} /></td>
-            <td><input value={draft.logo} placeholder="http://logo"
-              onChange={e => setDraft({ ...draft, logo: e.target.value })} /></td>
-            <td><input type="number" value={draft.sort} style={{ width: 60 }}
-              onChange={e => setDraft({ ...draft, sort: Number(e.target.value) })} /></td>
-            <td><button className="btn primary" onClick={add}><Plus /></button></td>
-          </tr>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
