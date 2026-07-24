@@ -31,6 +31,8 @@ export const setSchedule = (d: Partial<Schedule>) => http.put('/tasks/schedule',
 export const logsUrl = () => '/api/tasks/logs';  // for EventSource
 export const playlistUrls = () => ({ full: '/full.m3u', compact: '/compact.m3u', txt: '/iptv.txt' });
 export const proxyUrl = (u: string) => '/api/proxy?url=' + encodeURIComponent(u);
+// ffmpeg-remuxed continuous MPEG-TS — compatibility path for streams that stall in browser HLS
+export const restreamUrl = (u: string) => '/api/restream?url=' + encodeURIComponent(u);
 
 export const getProxy = () => http.get<{ http_proxy: string }>('/settings/proxy').then(r => r.data);
 export const setProxy = (http_proxy: string) => http.put('/settings/proxy', { http_proxy }).then(r => r.data);

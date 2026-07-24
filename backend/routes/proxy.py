@@ -1,3 +1,5 @@
+import asyncio
+import shutil
 from urllib.parse import quote, urljoin, urlparse
 
 import httpx
@@ -8,6 +10,16 @@ router = APIRouter(prefix="/api")
 
 _UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
        "AppleWebKit/605.1.15")
+
+
+def _ffmpeg_restream_cmd(url: str) -> list[str]:
+    # Remux (no re-encode) the source into a clean continuous MPEG-TS: ffmpeg
+    # normalizes timestamps and repeats PAT/PMT + H.264 SPS/PPS in-band, which
+    # fixes streams that stall in browser HLS (missing param sets / buffer holes).
+    return ["ffmpeg", "-hide_banner", "-loglevel", "error",
+            "-user_agent", _UA, "-fflags", "+genpts", "-i", url,
+            "-c", "copy", "-bsf:v", "dump_extra",
+            "-f", "mpegts", "-"]
 
 
 def _proxied(u: str) -> str:
@@ -63,8 +75,14 @@ async def proxy(url: str, request: Request):
             await client.aclose()
         text = body.decode("utf-8", errors="replace")
         rewritten = _rewrite_m3u8(text, str(r.url))
+        # A live playlist is a sliding window: the player must re-fetch it to see
+        # new segments. Without no-store the browser serves a cached (stale)
+        # playlist on refresh, so old segment names 404 and playback stalls after
+        # the initial buffer (~10s).
         return Response(content=rewritten,
-                        media_type="application/vnd.apple.mpegurl")
+                        media_type="application/vnd.apple.mpegurl",
+                        headers={"Cache-Control": "no-store, no-cache, must-revalidate",
+                                 "Access-Control-Allow-Origin": "*"})
 
     async def _iter():
         try:
@@ -74,7 +92,48 @@ async def proxy(url: str, request: Request):
             await r.aclose()
             await client.aclose()
 
-    resp_headers = {"Access-Control-Allow-Origin": "*"}
+    # Forward range/length headers so a 206 stays coherent: a partial response
+    # without Content-Range makes byte-range players (mpegts.js, <video>) abort.
+    resp_headers = {"Access-Control-Allow-Origin": "*",
+                    "Accept-Ranges": "bytes"}
+    for h in ("content-range", "accept-ranges", "content-length"):
+        v = r.headers.get(h)
+        if v:
+            resp_headers[h.title()] = v
     return StreamingResponse(_iter(), status_code=r.status_code,
                              media_type=ct or "application/octet-stream",
                              headers=resp_headers)
+
+
+@router.get("/restream")
+async def restream(url: str):
+    # Compatibility path for streams that stall in browser HLS: ffmpeg remuxes the
+    # source into a continuous MPEG-TS the frontend plays via mpegts.js.
+    if urlparse(url).scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="only http/https allowed")
+    if not shutil.which("ffmpeg"):
+        raise HTTPException(status_code=501, detail="ffmpeg not available")
+
+    proc = await asyncio.create_subprocess_exec(
+        *_ffmpeg_restream_cmd(url),
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+
+    async def _iter():
+        try:
+            while True:
+                chunk = await proc.stdout.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            # client disconnected or stream ended — don't leave ffmpeg running
+            if proc.returncode is None:
+                try:
+                    proc.kill()
+                except ProcessLookupError:
+                    pass
+                await proc.wait()
+
+    return StreamingResponse(_iter(), media_type="video/mp2t",
+                             headers={"Access-Control-Allow-Origin": "*",
+                                      "Cache-Control": "no-store"})
