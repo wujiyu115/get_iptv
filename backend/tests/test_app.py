@@ -7,6 +7,11 @@ def _client_with_frontend(tmp_path, monkeypatch):
     (dist / "index.html").write_text("<html>spa</html>", encoding="utf-8")
     monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
     monkeypatch.setenv("FRONTEND", str(dist))
+    # These tests only exercise SPA/static routing. Neutralize the scheduler so
+    # create_app() does not fire a real startup pipeline run (network + DB) or
+    # leave a live BackgroundScheduler thread. Test-only; real behavior intact.
+    import scheduler.scheduler as sched
+    monkeypatch.setattr(sched, "start", lambda: None)
     import db.database as d
     importlib.reload(d)
     d.init_db()
