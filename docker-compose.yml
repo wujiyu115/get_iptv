@@ -1,0 +1,10 @@
+services:
+  iptv:
+    build: .
+    ports:
+      - "5180:5180"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./data:/app/data
+      - ./output:/app/output
+    restart: unless-stopped

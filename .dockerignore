@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/*.pyc
+backend/config.yaml
+data
+output
+logs
+.git
+docs
+sources
