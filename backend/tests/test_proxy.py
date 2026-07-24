@@ -127,10 +127,12 @@ def test_restream_501_without_ffmpeg(monkeypatch):
                          params={"url": "http://h/x.m3u8"}).status_code == 501
 
 
-def test_restream_cmd_remuxes_copy():
+def test_restream_cmd_transcodes_to_ts():
     cmd = proxymod._ffmpeg_restream_cmd("http://h/x.m3u8")
     assert cmd[0] == "ffmpeg" and cmd[-1] == "-"
-    assert "-c" in cmd and "copy" in cmd and "mpegts" in cmd
+    # re-encode (not copy) so undecodable source frames are rebuilt cleanly
+    assert "libx264" in cmd and "aac" in cmd and "mpegts" in cmd
+    assert "copy" not in cmd
     assert cmd[cmd.index("-i") + 1] == "http://h/x.m3u8"
 
 

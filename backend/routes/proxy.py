@@ -13,12 +13,17 @@ _UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
 
 
 def _ffmpeg_restream_cmd(url: str) -> list[str]:
-    # Remux (no re-encode) the source into a clean continuous MPEG-TS: ffmpeg
-    # normalizes timestamps and repeats PAT/PMT + H.264 SPS/PPS in-band, which
-    # fixes streams that stall in browser HLS (missing param sets / buffer holes).
+    # Transcode the source into a clean continuous MPEG-TS. Stream-copy is not
+    # enough: these streams reference H.264 parameter sets (PPS) that are never
+    # sent in-band, so copied frames stay undecodable and browser MSE stalls.
+    # Re-encoding forces ffmpeg's tolerant decoder to rebuild valid H.264/AAC
+    # with proper SPS/PPS. ultrafast + zerolatency keeps it ~realtime.
     return ["ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-user_agent", _UA, "-fflags", "+genpts", "-i", url,
-            "-c", "copy", "-bsf:v", "dump_extra",
+            "-user_agent", _UA,
+            "-analyzeduration", "2000000", "-probesize", "5000000",
+            "-fflags", "+genpts", "-i", url,
+            "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+            "-c:a", "aac", "-ac", "2",
             "-f", "mpegts", "-"]
 
 
