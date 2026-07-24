@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { listAliases, createAlias, updateAlias, deleteAlias } from '../api';
 import type { Alias } from '../types';
 import { Plus, Trash } from '../icons';
+import HelpTip from './HelpTip';
 
 const BLANK = { canonical: '', pattern: '', is_regex: 0 };
 
@@ -21,7 +22,7 @@ export default function AliasPanel() {
 
   return (
     <div className="card">
-      <h3>频道别名（归一）</h3>
+      <h3>频道别名（归一）<HelpTip id="aliases" /></h3>
       <table>
         <thead><tr><th>规范名 canonical</th><th>匹配 pattern</th><th>正则</th><th></th></tr></thead>
         <tbody>

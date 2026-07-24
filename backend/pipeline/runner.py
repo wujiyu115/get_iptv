@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timezone
 
 from config.config_loader import config
@@ -105,7 +106,7 @@ def run(*, on_event=None) -> int:
             entries = merge_history(entries, _load_prev_channels(conn))
 
         emit("stage: output", "output")
-        out_dir = config.get("output.dir", "./output")
+        out_dir = os.environ.get("OUTPUT_DIR") or config.get("output.dir", "./output")
         conn.executemany(
             "INSERT INTO channels(run_id,name,group_title,url,logo,tvg_id,tvg_name,"
             "source,status,detail,resolution,speed,delay) "

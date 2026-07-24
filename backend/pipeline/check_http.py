@@ -27,24 +27,33 @@ def _check_one(e: Entry, timeout: int):
         return e, "ok"  # rtmp/rtsp/udp bypass HTTP check
     try:
         with httpx.Client(timeout=timeout, verify=False, follow_redirects=True) as c:
-            r = c.get(e.url, headers={"User-Agent": DEFAULT_UA})
-            body = r.content[:8192]
-            return e, classify_body(r.status_code,
-                                    r.headers.get("content-type", ""), body)
+            # stream + read only first chunk: live-stream URLs never end,
+            # so c.get() would download forever. Cap at 8 KB then close.
+            with c.stream("GET", e.url, headers={"User-Agent": DEFAULT_UA}) as r:
+                body = b""
+                for chunk in r.iter_bytes(8192):
+                    body = chunk
+                    break
+                return e, classify_body(r.status_code,
+                                        r.headers.get("content-type", ""), body)
     except Exception:  # noqa: BLE001
         return e, "dead"
 
 
 def check_all(entries, *, timeout=6, workers=70, open_filter_ad=True, on_log=None):
     out = []
+    total = len(entries)
+    step = max(1, total // 20)  # ~20 progress lines regardless of size
+    if on_log:
+        on_log(f"http check: 0/{total}")
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futs = [ex.submit(_check_one, e, timeout) for e in entries]
-        for fut in as_completed(futs):
+        for i, fut in enumerate(as_completed(futs), 1):
             e, status = fut.result()
             if status == "ok":
                 out.append(e)
             elif status == "ad" and not open_filter_ad:
                 out.append(e)
-    if on_log:
-        on_log(f"http check: {len(out)}/{len(entries)} reachable")
+            if on_log and (i % step == 0 or i == total):
+                on_log(f"http check: {i}/{total} (reachable={len(out)})")
     return out

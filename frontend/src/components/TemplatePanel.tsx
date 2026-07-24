@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { listTemplates, createTemplate, deleteTemplate } from '../api';
 import type { Template } from '../types';
 import { Plus, Trash } from '../icons';
+import HelpTip from './HelpTip';
 
 const BLANK = { canonical: '', group_title: '', logo: '', sort: 0 };
 
@@ -18,7 +19,7 @@ export default function TemplatePanel() {
 
   return (
     <div className="card">
-      <h3>频道模板菜单（空=收录全部）</h3>
+      <h3>频道模板菜单（空=收录全部）<HelpTip id="templates" /></h3>
       <table>
         <thead><tr><th>频道</th><th>分组</th><th>台标</th><th>排序</th><th></th></tr></thead>
         <tbody>

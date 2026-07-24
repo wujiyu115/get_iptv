@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { listSources, createSource, updateSource, deleteSource } from '../api';
 import type { Source } from '../types';
 import { Plus, Trash } from '../icons';
+import HelpTip from './HelpTip';
 
 const BLANK = { name: '', url: '', type: 'm3u' as const };
 
@@ -26,7 +27,7 @@ export default function SourcesPanel() {
 
   return (
     <div className="card">
-      <h3>抓取源</h3>
+      <h3>抓取源<HelpTip id="sources" /></h3>
       <table>
         <thead><tr><th>名称</th><th>URL</th><th>类型</th><th>启用</th>
           <th>代理</th><th>失败</th><th>最近成功</th><th></th></tr></thead>

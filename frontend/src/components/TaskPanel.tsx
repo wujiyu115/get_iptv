@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { runTask, getStatus, getSchedule, setSchedule, logsUrl } from '../api';
 import type { Schedule } from '../types';
+import HelpTip from './HelpTip';
 
 export default function TaskPanel() {
   const [logs, setLogs] = useState<string[]>([]);
@@ -44,7 +45,7 @@ export default function TaskPanel() {
       </div>
       {sched && (
         <div className="card">
-          <h3>调度设置</h3>
+          <h3>调度设置<HelpTip id="task" /></h3>
           <div style={{ display: 'grid', gap: 10, maxWidth: 420 }}>
             <label>模式
               <select value={sched.update_mode}

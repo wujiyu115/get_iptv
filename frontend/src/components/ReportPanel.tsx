@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getReport } from '../api';
 import type { Report } from '../types';
+import HelpTip from './HelpTip';
 
 export default function ReportPanel() {
   const [r, setR] = useState<Report | null>(null);
@@ -10,7 +11,7 @@ export default function ReportPanel() {
   return (
     <>
       <div className="card">
-        <h3>清晰度分布</h3>
+        <h3>清晰度分布<HelpTip id="report" /></h3>
         {Object.entries(r.resolution).map(([k, v]) => (
           <div key={k}>{k}: {v}</div>
         ))}

@@ -8,7 +8,6 @@ cd "$(dirname "$0")/frontend"
 bun install
 bun run build:dev
 bun run build:dev -- --watch &
-FRONTEND_PID=$!
 
 cd ../backend
 [ ! -f config.yaml ] && [ -f config.yaml.example ] && cp config.yaml.example config.yaml
@@ -16,7 +15,8 @@ cd ../backend
 source .venv/bin/activate
 uv pip install -r requirements.txt
 python run_dev.py &
-BACKEND_PID=$!
 
-trap "kill $FRONTEND_PID $BACKEND_PID 2>/dev/null; exit" INT
+# kill 0 hits the whole process group — needed because uvicorn reload spawns a
+# child reloader that survives killing BACKEND_PID alone (leaves port bound).
+trap 'kill 0' EXIT INT TERM
 wait

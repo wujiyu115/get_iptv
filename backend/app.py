@@ -26,8 +26,9 @@ def create_app() -> FastAPI:
     from routes.channels import router as channels_router
     from routes.reports import router as reports_router
     from routes.playlist import router as playlist_router
+    from routes.proxy import router as proxy_router
     for r in (sources_router, aliases_router, templates_router, tasks_router,
-              channels_router, reports_router, playlist_router):
+              channels_router, reports_router, playlist_router, proxy_router):
         app.include_router(r)
 
     try:

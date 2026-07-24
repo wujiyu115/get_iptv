@@ -64,12 +64,16 @@ def check_all(entries, *, timeout=10, workers=25, enabled=True, on_log=None):
             e.status = "unchecked"
         return entries
     out = []
+    total = len(entries)
+    step = max(1, total // 20)  # ~20 progress lines regardless of size
+    if on_log:
+        on_log(f"ffprobe: 0/{total}")
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futs = [ex.submit(_probe_one, e, timeout) for e in entries]
-        for fut in as_completed(futs):
+        for i, fut in enumerate(as_completed(futs), 1):
             e, ok = fut.result()
             if ok:
                 out.append(e)
-    if on_log:
-        on_log(f"ffprobe: {len(out)}/{len(entries)} playable")
+            if on_log and (i % step == 0 or i == total):
+                on_log(f"ffprobe: {i}/{total} (playable={len(out)})")
     return out

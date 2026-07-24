@@ -27,3 +27,4 @@ export const getSchedule = () => http.get<Schedule>('/tasks/schedule').then(r =>
 export const setSchedule = (d: Partial<Schedule>) => http.put('/tasks/schedule', d).then(r => r.data);
 export const logsUrl = () => '/api/tasks/logs';  // for EventSource
 export const playlistUrls = () => ({ full: '/full.m3u', compact: '/compact.m3u', txt: '/iptv.txt' });
+export const proxyUrl = (u: string) => '/api/proxy?url=' + encodeURIComponent(u);
