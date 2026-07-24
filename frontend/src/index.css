@@ -1,0 +1,58 @@
+:root{
+  --bg:#08090e; --glass:rgba(255,255,255,0.05); --glass-mid:rgba(255,255,255,0.08);
+  --glass-strong:rgba(255,255,255,0.14); --menu-bg:rgba(24,26,34,0.8);
+  --fg:rgba(255,255,255,0.92); --fg2:rgba(255,255,255,0.55); --muted:rgba(255,255,255,0.35);
+  --border:rgba(255,255,255,0.06); --border-strong:rgba(255,255,255,0.12);
+  --accent:#E8735A; --accent-soft:rgba(232,115,90,0.16);
+  --danger:#ff6b6b; --danger-soft:rgba(255,107,107,0.14);
+  --font:'SF Pro Display',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',sans-serif;
+  --blur:blur(40px) saturate(180%);
+  --r-card:16px; --r-ctl:12px; --r-pill:99px;
+  --inset:inset 0 1px 0 rgba(255,255,255,0.05);
+  --card-shadow:0 8px 30px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{
+  --bg:#e7e9f0; --glass:rgba(255,255,255,0.55); --glass-mid:rgba(255,255,255,0.7);
+  --glass-strong:rgba(255,255,255,0.85); --menu-bg:rgba(255,255,255,0.9);
+  --fg:rgba(20,22,28,0.92); --fg2:rgba(20,22,28,0.6); --muted:rgba(20,22,28,0.4);
+  --border:rgba(0,0,0,0.08); --border-strong:rgba(0,0,0,0.14);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);
+  transition:background .3s,color .3s;min-height:100vh;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 50% at 20% 10%,var(--accent-soft),transparent),
+             radial-gradient(50% 40% at 90% 20%,rgba(90,140,232,.14),transparent);}
+.glass{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--border);box-shadow:var(--inset);}
+header{display:flex;align-items:center;gap:16px;padding:16px clamp(12px,4vw,32px);
+  position:sticky;top:0;z-index:10;background:var(--glass);backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--border);}
+.brand{font-weight:700;font-size:clamp(16px,2.5vw,20px);}
+.tools{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.seg{display:flex;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);
+  padding:3px;backdrop-filter:var(--blur);}
+.seg button{border:0;background:transparent;color:var(--fg2);padding:7px 14px;border-radius:var(--r-pill);
+  cursor:pointer;font-size:13px;transition:.2s;}
+.seg button.active{background:var(--accent);color:#fff;}
+.icon-btn{width:38px;height:38px;display:grid;place-items:center;border-radius:var(--r-pill);
+  border:1px solid var(--border);background:var(--glass);color:var(--fg);cursor:pointer;}
+main{padding:clamp(12px,4vw,32px);max-width:1200px;margin:0 auto;}
+.card{background:var(--glass);border:1px solid var(--border);border-radius:var(--r-card);
+  padding:16px;box-shadow:var(--card-shadow);margin-bottom:14px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
+input,select{background:var(--glass-mid);border:1px solid var(--border);color:var(--fg);
+  border-radius:var(--r-ctl);padding:8px 10px;font-size:13px;font-family:var(--font);}
+.btn{border:1px solid var(--border-strong);background:var(--glass-strong);color:var(--fg);
+  border-radius:var(--r-ctl);padding:8px 14px;cursor:pointer;font-size:13px;}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn.danger{background:var(--danger-soft);border-color:var(--danger);color:var(--danger);}
+.grid-ch{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:12px;}
+.logs{font-family:ui-monospace,monospace;font-size:12px;background:rgba(0,0,0,.3);
+  border-radius:var(--r-ctl);padding:12px;height:320px;overflow:auto;white-space:pre-wrap;}
+.overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);display:grid;place-items:center;}
+.overlay video{max-width:96vw;max-height:90vh;border-radius:12px;}
+@media (max-width:560px){ main{padding:12px} th:nth-child(n+4),td:nth-child(n+4){display:none} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
