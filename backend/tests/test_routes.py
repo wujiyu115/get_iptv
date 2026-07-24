@@ -1,5 +1,9 @@
 import importlib
 
+from db.seed import SEED_SOURCES
+
+N_SEED = len(SEED_SOURCES)
+
 
 def _client(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
@@ -16,12 +20,12 @@ def _client(tmp_path, monkeypatch):
 
 def test_sources_crud_via_api(tmp_path, monkeypatch):
     c = _client(tmp_path, monkeypatch)
-    assert len(c.get("/api/sources").json()) == 5
+    assert len(c.get("/api/sources").json()) == N_SEED
     rid = c.post("/api/sources", json={"name": "x", "url": "http://x", "type": "m3u"}).json()["id"]
-    assert len(c.get("/api/sources").json()) == 6
+    assert len(c.get("/api/sources").json()) == N_SEED + 1
     c.put(f"/api/sources/{rid}", json={"enabled": 0})
     c.delete(f"/api/sources/{rid}")
-    assert len(c.get("/api/sources").json()) == 5
+    assert len(c.get("/api/sources").json()) == N_SEED
 
 
 def test_task_status_idle(tmp_path, monkeypatch):

@@ -1,5 +1,9 @@
 import importlib
 
+from db.seed import SEED_SOURCES
+
+N_SEED = len(SEED_SOURCES)
+
 
 def _fresh_db(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
@@ -20,7 +24,7 @@ def test_tables_created(tmp_path, monkeypatch):
 def test_seed_sources_and_aliases(tmp_path, monkeypatch):
     d = _fresh_db(tmp_path, monkeypatch)
     conn = d.get_conn()
-    assert conn.execute("SELECT COUNT(*) c FROM sources").fetchone()["c"] == 5
+    assert conn.execute("SELECT COUNT(*) c FROM sources").fetchone()["c"] == N_SEED
     assert conn.execute("SELECT COUNT(*) c FROM aliases").fetchone()["c"] > 0
 
 
@@ -28,4 +32,4 @@ def test_seed_idempotent(tmp_path, monkeypatch):
     d = _fresh_db(tmp_path, monkeypatch)
     d.init_db()  # second call must not duplicate
     conn = d.get_conn()
-    assert conn.execute("SELECT COUNT(*) c FROM sources").fetchone()["c"] == 5
+    assert conn.execute("SELECT COUNT(*) c FROM sources").fetchone()["c"] == N_SEED

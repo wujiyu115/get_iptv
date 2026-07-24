@@ -7,6 +7,12 @@ SEED_SOURCES = [
      "https://raw.githubusercontent.com/Guovin/iptv-api/gd/output/result.txt", "txt"),
     ("yang-gather", "https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u", "m3u"),
     ("yang-migu", "https://raw.githubusercontent.com/YanG-1989/m3u/main/Migu.m3u", "m3u"),
+    ("suxuang-ipv4",
+     "https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u", "m3u"),
+    ("yuechan-iptv", "https://raw.githubusercontent.com/YueChan/Live/main/IPTV.m3u", "m3u"),
+    ("yuechan-global", "https://raw.githubusercontent.com/YueChan/Live/main/Global.m3u", "m3u"),
+    ("vbskycn-iptv4", "https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u", "m3u"),
+    ("kimentanm-aptv", "https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u", "m3u"),
 ]
 
 # (canonical, pattern, is_regex)
