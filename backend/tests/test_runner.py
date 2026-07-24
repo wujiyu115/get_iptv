@@ -1,6 +1,8 @@
 import importlib
 
-from pipeline.models import Entry
+import pytest
+
+from pipeline.models import Entry, RunCancelled
 from pipeline.runner import merge_history, FAIL_DISABLE_THRESHOLD
 
 
@@ -51,3 +53,34 @@ def test_run_end_to_end_stubbed(tmp_path, monkeypatch):
     assert conn.execute("SELECT COUNT(*) c FROM channels WHERE run_id=?",
                         (run_id,)).fetchone()["c"] >= 1
     assert (tmp_path / "out" / "full.m3u").exists()
+
+
+def test_run_cancelled_marks_status(tmp_path, monkeypatch):
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
+    monkeypatch.setenv("CONFIG_FILE", str(tmp_path / "cfg.yaml"))
+    (tmp_path / "cfg.yaml").write_text(
+        f"output:\n  dir: {tmp_path}/out\ncheck:\n  ffprobe_enabled: false\n",
+        encoding="utf-8")
+    import config.config_loader as cl
+    importlib.reload(cl)
+    import db.database as d
+    importlib.reload(d)
+    d.init_db()
+    import pipeline.fetch as fetch
+    import pipeline.runner as runner
+    importlib.reload(fetch)
+    importlib.reload(runner)
+
+    monkeypatch.setattr(runner.fetch, "fetch_all",
+                        lambda sources, **k: [({"name": "s", "type": "m3u"},
+                                               "#EXTM3U\n#EXTINF:-1,A\nhttp://a/1\n")])
+
+    # cancel requested immediately -> first checkpoint (after fetch) aborts.
+    with pytest.raises(RunCancelled):
+        runner.run(on_event=lambda msg, stage="": None, should_cancel=lambda: True)
+
+    conn = d.get_conn()
+    row = conn.execute("SELECT status FROM runs ORDER BY id DESC LIMIT 1").fetchone()
+    assert row["status"] == "cancelled"
+    # a cancelled run must not have written output
+    assert not (tmp_path / "out" / "full.m3u").exists()

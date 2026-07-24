@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 
 
+class RunCancelled(Exception):
+    """Raised cooperatively when a run is asked to stop mid-flight."""
+
+
 @dataclass
 class Entry:
     name: str

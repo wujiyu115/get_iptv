@@ -1,4 +1,16 @@
+import pytest
+
+import pipeline.check_ffprobe as cf
 from pipeline.check_ffprobe import parse_probe_json, build_cmd
+from pipeline.models import Entry, RunCancelled
+
+
+def test_check_all_cancel_raises(monkeypatch):
+    monkeypatch.setattr(cf, "ffprobe_available", lambda: True)
+    monkeypatch.setattr(cf, "_probe_one", lambda e, t: (e, True))
+    entries = [Entry(name=str(i), url="http://x") for i in range(30)]
+    with pytest.raises(RunCancelled):
+        cf.check_all(entries, should_cancel=lambda: True)
 
 
 def test_parse_video_stream():

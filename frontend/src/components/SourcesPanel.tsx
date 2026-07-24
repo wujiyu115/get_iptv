@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { listSources, createSource, updateSource, deleteSource } from '../api';
+import { listSources, createSource, updateSource, deleteSource, getProxy, setProxy } from '../api';
 import type { Source } from '../types';
 import { Plus, Trash, Search } from '../icons';
 import HelpTip from './HelpTip';
@@ -10,9 +10,23 @@ export default function SourcesPanel() {
   const [rows, setRows] = useState<Source[]>([]);
   const [draft, setDraft] = useState(BLANK);
   const [q, setQ] = useState('');
+  const [proxyOpen, setProxyOpen] = useState(false);
+  const [proxyVal, setProxyVal] = useState('');
+  const [proxySaving, setProxySaving] = useState(false);
 
   const reload = () => listSources().then(setRows);
   useEffect(() => { reload(); }, []);
+
+  const openProxy = async () => {
+    const { http_proxy } = await getProxy();
+    setProxyVal(http_proxy);
+    setProxyOpen(true);
+  };
+  const saveProxy = async () => {
+    setProxySaving(true);
+    try { await setProxy(proxyVal.trim()); setProxyOpen(false); }
+    finally { setProxySaving(false); }
+  };
 
   const kw = q.trim().toLowerCase();
   const shown = kw ? rows.filter(s =>
@@ -31,10 +45,12 @@ export default function SourcesPanel() {
   const remove = async (id: number) => { await deleteSource(id); reload(); };
 
   return (
+    <>
     <div className="card">
       <div className="card-head">
         <h2>抓取源</h2><HelpTip id="sources" />
         <span className="badge badge-count">{shown.length} / {rows.length}</span>
+        <button className="btn btn-ghost" style={{ marginLeft: 8 }} onClick={openProxy}>代理设置</button>
       </div>
       <div className="card-body">
         <div className="search-bar">
@@ -87,5 +103,26 @@ export default function SourcesPanel() {
         </table>
       </div>
     </div>
+
+    {proxyOpen && (
+      <div className="overlay" onClick={() => setProxyOpen(false)}>
+        <div className="card proxy-modal" onClick={e => e.stopPropagation()}>
+          <div className="card-head"><h2>代理设置</h2></div>
+          <div className="card-body">
+            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 10 }}>
+              抓取时对勾选「代理」的源生效。留空则不使用代理。
+            </p>
+            <input className="inp" value={proxyVal} placeholder="http://host:port"
+              autoFocus onChange={e => setProxyVal(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveProxy(); }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <button className="btn btn-ghost" onClick={() => setProxyOpen(false)}>取消</button>
+              <button className="btn btn-primary" disabled={proxySaving} onClick={saveProxy}>保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

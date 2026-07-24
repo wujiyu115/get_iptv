@@ -4,7 +4,7 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from pipeline.models import Entry
+from pipeline.models import Entry, RunCancelled
 
 _PROBESIZE = 1_000_000  # bytes sampled; used to estimate speed
 
@@ -56,7 +56,8 @@ def _probe_one(e: Entry, timeout: int):
         return e, False
 
 
-def check_all(entries, *, timeout=10, workers=25, enabled=True, on_log=None):
+def check_all(entries, *, timeout=10, workers=25, enabled=True, on_log=None,
+              should_cancel=None):
     if not enabled or not ffprobe_available():
         if on_log:
             on_log("ffprobe disabled/missing — skipping playback confirmation")
@@ -71,6 +72,10 @@ def check_all(entries, *, timeout=10, workers=25, enabled=True, on_log=None):
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futs = [ex.submit(_probe_one, e, timeout) for e in entries]
         for i, fut in enumerate(as_completed(futs), 1):
+            if should_cancel and should_cancel():
+                for f in futs:
+                    f.cancel()
+                raise RunCancelled()
             e, ok = fut.result()
             if ok:
                 out.append(e)

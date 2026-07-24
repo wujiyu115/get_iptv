@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { runTask, getStatus, getSchedule, setSchedule, logsUrl } from '../api';
+import { runTask, stopTask, getStatus, getSchedule, setSchedule, logsUrl } from '../api';
 import type { Schedule } from '../types';
 import { Play } from '../icons';
 import HelpTip from './HelpTip';
@@ -35,12 +35,18 @@ export default function TaskPanel() {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs]);
 
+  const [stopping, setStopping] = useState(false);
   const run = async () => {
     try { await runTask(); } catch { alert('已有任务在运行'); }
+  };
+  const stop = async () => {
+    setStopping(true);
+    try { await stopTask(); } catch { /* nothing running */ }
   };
   const saveSched = async () => { if (sched) { await setSchedule(sched); alert('已保存'); } };
 
   const running = status === 'running';
+  useEffect(() => { if (!running) setStopping(false); }, [running]);
   const pillCls = running ? '' : status === 'failed' ? 'fail' : 'idle';
 
   return (
@@ -51,6 +57,11 @@ export default function TaskPanel() {
             <button className="btn btn-primary" onClick={run} disabled={running}>
               <Play /> {running ? '运行中…' : '运行一次'}
             </button>
+            {running && (
+              <button className="btn btn-danger-ghost" onClick={stop} disabled={stopping}>
+                {stopping ? '停止中…' : '中断'}
+              </button>
+            )}
             <span className={`pill-run ${pillCls}`} style={{ marginLeft: 'auto' }}>
               {running && <span className="pulse" />}
               状态：{status}{stage ? ` · ${stage}` : ''}

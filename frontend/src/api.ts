@@ -22,9 +22,13 @@ export const listChannels = (run = 'latest') => http.get<Channel[]>('/channels',
 export const getReport = () => http.get<Report>('/reports').then(r => r.data);
 
 export const runTask = () => http.post('/tasks/run').then(r => r.data);
+export const stopTask = () => http.post('/tasks/stop').then(r => r.data);
 export const getStatus = () => http.get<TaskStatus>('/tasks/status').then(r => r.data);
 export const getSchedule = () => http.get<Schedule>('/tasks/schedule').then(r => r.data);
 export const setSchedule = (d: Partial<Schedule>) => http.put('/tasks/schedule', d).then(r => r.data);
 export const logsUrl = () => '/api/tasks/logs';  // for EventSource
 export const playlistUrls = () => ({ full: '/full.m3u', compact: '/compact.m3u', txt: '/iptv.txt' });
 export const proxyUrl = (u: string) => '/api/proxy?url=' + encodeURIComponent(u);
+
+export const getProxy = () => http.get<{ http_proxy: string }>('/settings/proxy').then(r => r.data);
+export const setProxy = (http_proxy: string) => http.put('/settings/proxy', { http_proxy }).then(r => r.data);

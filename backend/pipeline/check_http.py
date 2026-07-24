@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import httpx
 
 from pipeline.fetch import DEFAULT_UA
-from pipeline.models import Entry
+from pipeline.models import Entry, RunCancelled
 
 AD_KEYWORDS = ["广告", "占位", "advertisement", "sponsor"]
 _HTTP = ("http://", "https://")
@@ -40,7 +40,8 @@ def _check_one(e: Entry, timeout: int):
         return e, "dead"
 
 
-def check_all(entries, *, timeout=6, workers=70, open_filter_ad=True, on_log=None):
+def check_all(entries, *, timeout=6, workers=70, open_filter_ad=True, on_log=None,
+              should_cancel=None):
     out = []
     total = len(entries)
     step = max(1, total // 20)  # ~20 progress lines regardless of size
@@ -49,6 +50,10 @@ def check_all(entries, *, timeout=6, workers=70, open_filter_ad=True, on_log=Non
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futs = [ex.submit(_check_one, e, timeout) for e in entries]
         for i, fut in enumerate(as_completed(futs), 1):
+            if should_cancel and should_cancel():
+                for f in futs:
+                    f.cancel()
+                raise RunCancelled()
             e, status = fut.result()
             if status == "ok":
                 out.append(e)

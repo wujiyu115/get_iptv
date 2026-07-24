@@ -26,6 +26,13 @@ def trigger():
     return {"ok": True}
 
 
+@router.post("/tasks/stop")
+def stop():
+    if not run_service.request_cancel():
+        raise HTTPException(status_code=409, detail="no run in progress")
+    return {"ok": True}
+
+
 @router.get("/tasks/status")
 def status():
     return run_service.snapshot()

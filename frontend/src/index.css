@@ -389,6 +389,7 @@ select.inp option { background: var(--bg); color: var(--fg); }
   display: grid; place-items: center; }
 .overlay video { width: min(94vw,1100px); aspect-ratio: 16/9; max-height: 82vh;
   background: #000; border-radius: 12px; }
+.proxy-modal { width: min(92vw, 440px); }
 
 /* ─── responsive ──────────────────────────────────────────────────── */
 @media (max-width: 767px) {

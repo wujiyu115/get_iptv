@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   started_at TEXT NOT NULL,
   finished_at TEXT,
-  status TEXT NOT NULL CHECK(status IN ('running','done','failed')),
+  status TEXT NOT NULL CHECK(status IN ('running','done','failed','cancelled')),
   stats_json TEXT DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS channels (
@@ -49,3 +49,7 @@ CREATE TABLE IF NOT EXISTS channels (
   delay REAL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_channels_run ON channels(run_id);
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT ''
+);

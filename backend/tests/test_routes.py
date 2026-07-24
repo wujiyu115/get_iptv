@@ -29,6 +29,19 @@ def test_task_status_idle(tmp_path, monkeypatch):
     assert c.get("/api/tasks/status").json()["status"] in ("idle", "running", "done")
 
 
+def test_stop_when_idle_returns_409(tmp_path, monkeypatch):
+    c = _client(tmp_path, monkeypatch)
+    assert c.post("/api/tasks/stop").status_code == 409
+
+
+def test_proxy_setting_roundtrip(tmp_path, monkeypatch):
+    c = _client(tmp_path, monkeypatch)
+    assert c.get("/api/settings/proxy").json() == {"http_proxy": ""}
+    assert c.put("/api/settings/proxy",
+                 json={"http_proxy": " http://127.0.0.1:7890 "}).status_code == 200
+    assert c.get("/api/settings/proxy").json()["http_proxy"] == "http://127.0.0.1:7890"
+
+
 def test_playlist_404_before_generation(tmp_path, monkeypatch):
     c = _client(tmp_path, monkeypatch)
     assert c.get("/full.m3u").status_code == 404

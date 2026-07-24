@@ -50,7 +50,12 @@ def _delete(table, _id):
 
 def list_sources(): return _rows("SELECT * FROM sources ORDER BY sort, id")
 def create_source(d): return _insert("sources", _SRC_FIELDS, d)
-def update_source(i, d): _update("sources", _SRC_FIELDS, i, d)
+def update_source(i, d):
+    # Re-enabling a source clears its accumulated fail_count so one more
+    # failure won't immediately re-trip the auto-disable threshold.
+    if int(d.get("enabled", 0)) == 1:
+        d = {**d, "fail_count": 0}
+    _update("sources", (*_SRC_FIELDS, "fail_count"), i, d)
 def delete_source(i): _delete("sources", i)
 
 def list_aliases(): return _rows("SELECT * FROM aliases ORDER BY id")

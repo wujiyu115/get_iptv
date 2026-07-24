@@ -6,7 +6,8 @@ from config.config_loader import config
 from db import database
 from pipeline import (check_ffprobe, check_http, dedup, fetch, filter_sort,
                       normalize, output, parse)
-from pipeline.models import Entry
+from pipeline.models import Entry, RunCancelled
+from services import settings_service
 
 FAIL_DISABLE_THRESHOLD = 5
 
@@ -40,8 +41,14 @@ def _load_prev_channels(conn) -> list[Entry]:
             for r in rows]
 
 
-def run(*, on_event=None) -> int:
+def run(*, on_event=None, should_cancel=None) -> int:
     emit = on_event or (lambda msg, stage="": None)
+    should_cancel = should_cancel or (lambda: False)
+
+    def ckpt() -> None:
+        if should_cancel():
+            raise RunCancelled()
+
     conn = database.get_conn()
     cur = conn.execute("INSERT INTO runs(started_at,status) VALUES (?, 'running')",
                        (_now(),))
@@ -61,10 +68,11 @@ def run(*, on_event=None) -> int:
             sources, user_agent=config.get("fetch.user_agent", ""),
             timeout=config.get("fetch.request_timeout", 10),
             retries=config.get("fetch.retries", 2),
-            http_proxy=config.get("fetch.http_proxy", ""),
+            http_proxy=settings_service.get("fetch.http_proxy", ""),
             on_log=lambda m: emit(m, "fetch"))
         ok_names = {s["name"] for s, _ in fetched}
 
+        ckpt()
         emit("stage: parse", "parse")
         entries: list[Entry] = []
         epg_urls: list[str] = []
@@ -73,6 +81,7 @@ def run(*, on_event=None) -> int:
             epg_urls.extend(parse.extract_epg(text))
         epg_urls = list(dict.fromkeys(epg_urls))
 
+        ckpt()
         emit("stage: normalize", "normalize")
         entries = normalize.apply_aliases(entries, aliases)
         entries = normalize.apply_templates(entries, templates, keep_unmatched=True)
@@ -80,20 +89,23 @@ def run(*, on_event=None) -> int:
         emit("stage: dedup", "dedup")
         entries = dedup.dedup(entries)
 
+        ckpt()
         emit("stage: check_http", "check_http")
         entries = check_http.check_all(
             entries, timeout=config.get("check.http_timeout", 6),
             workers=config.get("check.http_workers", 70),
             open_filter_ad=config.get("filter.open_filter_ad", True),
-            on_log=lambda m: emit(m, "check_http"))
+            on_log=lambda m: emit(m, "check_http"), should_cancel=should_cancel)
 
+        ckpt()
         emit("stage: check_ffprobe", "check_ffprobe")
         entries = check_ffprobe.check_all(
             entries, timeout=config.get("check.ffprobe_timeout", 10),
             workers=config.get("check.ffprobe_workers", 25),
             enabled=config.get("check.ffprobe_enabled", True),
-            on_log=lambda m: emit(m, "check_ffprobe"))
+            on_log=lambda m: emit(m, "check_ffprobe"), should_cancel=should_cancel)
 
+        ckpt()
         emit("stage: filter_sort", "filter_sort")
         entries = filter_sort.apply(
             entries, min_resolution=config.get("filter.min_resolution", ""),
@@ -138,6 +150,17 @@ def run(*, on_event=None) -> int:
         conn.commit()
         emit(f"done: {stats}", "done")
         return run_id
+    except RunCancelled:
+        # 'cancelled' may violate an older DB's CHECK constraint; fall back to 'failed'.
+        try:
+            conn.execute("UPDATE runs SET status='cancelled', finished_at=? WHERE id=?",
+                        (_now(), run_id))
+        except Exception:  # noqa: BLE001
+            conn.execute("UPDATE runs SET status='failed', finished_at=? WHERE id=?",
+                        (_now(), run_id))
+        conn.commit()
+        emit("run cancelled by user", "cancelled")
+        raise
     except Exception as e:  # noqa: BLE001
         conn.execute("UPDATE runs SET status='failed', finished_at=? WHERE id=?",
                     (_now(), run_id))
