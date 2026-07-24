@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { listAliases, createAlias, updateAlias, deleteAlias } from '../api';
 import type { Alias } from '../types';
-import { Plus, Trash } from '../icons';
+import { Plus, Trash, Search } from '../icons';
 import HelpTip from './HelpTip';
 
 const BLANK = { canonical: '', pattern: '', is_regex: 0 };
@@ -9,8 +9,13 @@ const BLANK = { canonical: '', pattern: '', is_regex: 0 };
 export default function AliasPanel() {
   const [rows, setRows] = useState<Alias[]>([]);
   const [draft, setDraft] = useState(BLANK);
+  const [q, setQ] = useState('');
   const reload = () => listAliases().then(setRows);
   useEffect(() => { reload(); }, []);
+
+  const kw = q.trim().toLowerCase();
+  const shown = kw ? rows.filter(a =>
+    (a.canonical + ' ' + a.pattern).toLowerCase().includes(kw)) : rows;
   const add = async () => {
     if (!draft.canonical || !draft.pattern) return;
     await createAlias(draft); setDraft(BLANK); reload();
@@ -24,7 +29,14 @@ export default function AliasPanel() {
     <div className="card">
       <div className="card-head">
         <h2>频道别名 · 归一</h2><HelpTip id="aliases" />
-        <span className="badge badge-count">{rows.length}</span>
+        <span className="badge badge-count">{shown.length} / {rows.length}</span>
+      </div>
+      <div className="card-body">
+        <div className="search-bar">
+          <Search />
+          <input className="inp" type="search" value={q} placeholder="搜索规范名 / pattern…"
+            onChange={e => setQ(e.target.value)} />
+        </div>
       </div>
       <div className="card-body flush">
         <table className="tbl responsive">
@@ -32,7 +44,7 @@ export default function AliasPanel() {
             <tr><th>规范名 canonical</th><th>匹配 pattern</th><th className="center">正则</th><th></th></tr>
           </thead>
           <tbody>
-            {rows.map(a => (
+            {shown.map(a => (
               <tr key={a.id}>
                 <td data-label="规范名" className="name-strong">{a.canonical}</td>
                 <td data-label="pattern" className="url">{a.pattern}</td>

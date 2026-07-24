@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { listSources, createSource, updateSource, deleteSource } from '../api';
 import type { Source } from '../types';
-import { Plus, Trash } from '../icons';
+import { Plus, Trash, Search } from '../icons';
 import HelpTip from './HelpTip';
 
 const BLANK = { name: '', url: '', type: 'm3u' as const };
@@ -9,9 +9,14 @@ const BLANK = { name: '', url: '', type: 'm3u' as const };
 export default function SourcesPanel() {
   const [rows, setRows] = useState<Source[]>([]);
   const [draft, setDraft] = useState(BLANK);
+  const [q, setQ] = useState('');
 
   const reload = () => listSources().then(setRows);
   useEffect(() => { reload(); }, []);
+
+  const kw = q.trim().toLowerCase();
+  const shown = kw ? rows.filter(s =>
+    (s.name + ' ' + s.url + ' ' + s.type).toLowerCase().includes(kw)) : rows;
 
   const add = async () => {
     if (!draft.name || !draft.url) return;
@@ -29,7 +34,14 @@ export default function SourcesPanel() {
     <div className="card">
       <div className="card-head">
         <h2>抓取源</h2><HelpTip id="sources" />
-        <span className="badge badge-count">{rows.length}</span>
+        <span className="badge badge-count">{shown.length} / {rows.length}</span>
+      </div>
+      <div className="card-body">
+        <div className="search-bar">
+          <Search />
+          <input className="inp" type="search" value={q} placeholder="搜索名称 / URL / 类型…"
+            onChange={e => setQ(e.target.value)} />
+        </div>
       </div>
       <div className="card-body flush">
         <table className="tbl responsive">
@@ -39,7 +51,7 @@ export default function SourcesPanel() {
               <th className="num">失效</th><th>最近成功</th><th></th></tr>
           </thead>
           <tbody>
-            {rows.map(s => (
+            {shown.map(s => (
               <tr key={s.id}>
                 <td data-label="名称" className="name-strong">{s.name}</td>
                 <td data-label="URL" className="url">{s.url}</td>
