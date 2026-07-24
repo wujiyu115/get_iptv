@@ -19,7 +19,7 @@ def report() -> dict:
             buckets["1080p+" if h >= 1080 else "720p" if h >= 720
                     else "480p" if h >= 480 else "SD"] += 1
         sources = [dict(r) for r in conn.execute(
-            "SELECT name,enabled,fail_count,last_ok_at FROM sources ORDER BY sort, id")]
+            "SELECT id,name,enabled,fail_count,last_ok_at FROM sources ORDER BY sort, id")]
         runs = [dict(r) for r in conn.execute(
             "SELECT id,started_at,finished_at,status,stats_json FROM runs "
             "ORDER BY id DESC LIMIT 20")]

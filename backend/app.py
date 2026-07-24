@@ -1,6 +1,6 @@
 import os
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -14,7 +14,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 def create_app() -> FastAPI:
     app = FastAPI(title="IPTV 聚合服务", version="1.0.0")
     app.add_middleware(
-        CORSMiddleware, allow_origins=["*"], allow_credentials=True,
+        CORSMiddleware, allow_origins=["*"], allow_credentials=False,
         allow_methods=["*"], allow_headers=["*"])
 
     init_db()
@@ -43,7 +43,7 @@ def create_app() -> FastAPI:
             app.mount("/static", StaticFiles(directory=static_assets), name="static")
 
         @app.get("/{full_path:path}")
-        async def serve_spa(request: Request, full_path: str):
+        async def serve_spa(full_path: str):
             if full_path.startswith("api/"):
                 return JSONResponse({"message": "Not Found"}, status_code=404)
             if ".." in full_path or full_path.startswith("/") or "\\" in full_path:

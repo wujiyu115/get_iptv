@@ -11,7 +11,6 @@ def fetch_one(source: dict, *, user_agent: str = "", timeout: int = 10,
               retries: int = 2, http_proxy: str = ""):
     ua = user_agent or DEFAULT_UA
     proxy = http_proxy if source.get("use_proxy") and http_proxy else None
-    last_err = None
     for _ in range(retries + 1):
         try:
             with httpx.Client(timeout=timeout, verify=False, follow_redirects=True,
@@ -20,11 +19,10 @@ def fetch_one(source: dict, *, user_agent: str = "", timeout: int = 10,
                 r.raise_for_status()
                 text = r.text
                 if len(text) < MIN_CONTENT_BYTES:
-                    last_err = "response too small"
                     continue
                 return source, text
-        except Exception as e:  # noqa: BLE001 - single source must not abort batch
-            last_err = str(e)
+        except Exception:  # noqa: BLE001 - single source must not abort batch
+            continue
     return source, None
 
 

@@ -10,7 +10,13 @@ def _latest_done_run_id(conn):
 def list_channels(run: str = "latest") -> list[dict]:
     conn = get_conn()
     try:
-        rid = _latest_done_run_id(conn) if run == "latest" else int(run)
+        if run == "latest":
+            rid = _latest_done_run_id(conn)
+        else:
+            try:
+                rid = int(run)
+            except ValueError:
+                rid = _latest_done_run_id(conn)
         if rid is None:
             return []
         return [dict(r) for r in conn.execute(
