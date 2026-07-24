@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { listSources, createSource, updateSource, deleteSource, getProxy, setProxy } from '../api';
+import { listSources, createSource, updateSource, deleteSource, getProxy, setProxy, sourceGithubUpdated } from '../api';
 import type { Source } from '../types';
 import { Plus, Trash, Search } from '../icons';
+import { fmtLocal } from '../time';
 import HelpTip from './HelpTip';
 
 const BLANK = { name: '', url: '', type: 'm3u' as const };
@@ -13,9 +14,20 @@ export default function SourcesPanel() {
   const [proxyOpen, setProxyOpen] = useState(false);
   const [proxyVal, setProxyVal] = useState('');
   const [proxySaving, setProxySaving] = useState(false);
+  const [ghUpdated, setGhUpdated] = useState<Record<number, string | null>>({});
+  const [ghBusy, setGhBusy] = useState<number | null>(null);
 
   const reload = () => listSources().then(setRows);
   useEffect(() => { reload(); }, []);
+
+  // Not auto-fetched: GitHub's API is rate-limited (60/h unauth). Each row is
+  // fetched on demand — one click = one API call for that source only.
+  const loadGithubTime = async (id: number) => {
+    setGhBusy(id);
+    try { const { updated } = await sourceGithubUpdated(id); setGhUpdated(p => ({ ...p, [id]: updated })); }
+    catch { alert('获取失败（可能触发 GitHub 速率限制，稍后再试）'); }
+    finally { setGhBusy(null); }
+  };
 
   const openProxy = async () => {
     const { http_proxy } = await getProxy();
@@ -64,7 +76,7 @@ export default function SourcesPanel() {
           <thead>
             <tr><th>名称</th><th>URL</th><th>类型</th>
               <th className="center">启用</th><th className="center">代理</th>
-              <th className="num">失效</th><th>最近成功</th><th></th></tr>
+              <th className="num">失效</th><th>最近成功</th><th>更新时间</th><th></th></tr>
           </thead>
           <tbody>
             {shown.map(s => (
@@ -81,7 +93,14 @@ export default function SourcesPanel() {
                 <td data-label="失效" className="num">
                   {s.fail_count ? <span className="badge badge-fail">{s.fail_count}</span> : '0'}</td>
                 <td data-label="最近成功" className="mono" style={{ color: 'var(--muted)', fontSize: 12.5 }}>
-                  {s.last_ok_at?.slice(0, 16) || '—'}</td>
+                  {fmtLocal(s.last_ok_at)}</td>
+                <td data-label="更新时间" className="mono" style={{ color: 'var(--muted)', fontSize: 12.5 }}>
+                  {s.id in ghUpdated
+                    ? (ghUpdated[s.id] ? fmtLocal(ghUpdated[s.id]!) : '—')
+                    : <button className="btn btn-ghost" style={{ padding: '2px 10px', fontSize: 12 }}
+                        onClick={() => loadGithubTime(s.id)} disabled={ghBusy === s.id}>
+                        {ghBusy === s.id ? '…' : '更新'}
+                      </button>}</td>
                 <td style={{ textAlign: 'right' }}>
                   <button className="icon-trash" onClick={() => remove(s.id)} aria-label="删除"><Trash /></button></td>
               </tr>
@@ -96,7 +115,7 @@ export default function SourcesPanel() {
                   onChange={e => setDraft({ ...draft, type: e.target.value as 'm3u' | 'txt' })}>
                   <option value="m3u">m3u</option><option value="txt">txt</option>
                 </select></td>
-              <td colSpan={2} style={{ textAlign: 'right' }}>
+              <td colSpan={3} style={{ textAlign: 'right' }}>
                 <button className="btn-icon-add" onClick={add} aria-label="添加源"><Plus /></button></td>
             </tr>
           </tbody>

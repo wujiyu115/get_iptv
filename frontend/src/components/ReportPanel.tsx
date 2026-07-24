@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getReport } from '../api';
 import type { Report } from '../types';
+import { fmtLocal } from '../time';
 import HelpTip from './HelpTip';
 
 const resClass = (k: string) => {
@@ -67,7 +68,7 @@ export default function ReportPanel() {
                   <td data-label="启用" className="center"><span className={`dot-status ${s.enabled ? 'ok' : 'fail'}`} /></td>
                   <td data-label="失效" className="num mono">{s.fail_count}</td>
                   <td data-label="最近成功" className="mono" style={{ color: 'var(--muted)', fontSize: 12.5 }}>
-                    {s.last_ok_at?.slice(0, 16) || '—'}</td>
+                    {fmtLocal(s.last_ok_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -84,8 +85,8 @@ export default function ReportPanel() {
               {r.runs.map(run => (
                 <tr key={run.id}>
                   <td data-label="#" className="num mono">{run.id}</td>
-                  <td data-label="开始" className="mono" style={{ fontSize: 12.5 }}>{run.started_at?.slice(0, 16)}</td>
-                  <td data-label="结束" className="mono" style={{ fontSize: 12.5, color: 'var(--muted)' }}>{run.finished_at?.slice(0, 16) || '—'}</td>
+                  <td data-label="开始" className="mono" style={{ fontSize: 12.5 }}>{fmtLocal(run.started_at)}</td>
+                  <td data-label="结束" className="mono" style={{ fontSize: 12.5, color: 'var(--muted)' }}>{fmtLocal(run.finished_at)}</td>
                   <td data-label="状态" className="center">
                     {run.status === 'done'
                       ? <span className="badge badge-ok">done</span>

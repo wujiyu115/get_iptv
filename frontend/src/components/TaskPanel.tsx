@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { runTask, stopTask, getStatus, getSchedule, setSchedule, logsUrl } from '../api';
 import type { Schedule } from '../types';
 import { Play } from '../icons';
+import { fmtLocal } from '../time';
 import HelpTip from './HelpTip';
 
 function LogLine({ raw }: { raw: string }) {
   const sp = raw.indexOf(' ');
-  const ts = sp > 0 ? raw.slice(0, sp) : '';
+  const ts = sp > 0 ? fmtLocal(raw.slice(0, sp)) : '';
   const msg = sp > 0 ? raw.slice(sp + 1) : raw;
   const cls = /FAIL/i.test(msg) ? 'fail'
     : /(\bok\b|reachable|playable|done|✓)/i.test(msg) ? 'ok'

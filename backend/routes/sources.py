@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from services import github_service
 from services import source_service as svc
 
 router = APIRouter(prefix="/api")
@@ -19,6 +20,15 @@ class SourceIn(BaseModel):
 @router.get("/sources")
 def list_sources():
     return svc.list_sources()
+
+
+@router.get("/sources/{sid}/github-updated")
+def source_github_updated(sid: int):
+    # One GitHub API call for this source only (null for non-raw.githubusercontent URLs).
+    src = next((s for s in svc.list_sources() if s["id"] == sid), None)
+    if src is None:
+        raise HTTPException(status_code=404, detail="source not found")
+    return {"id": sid, "updated": github_service.last_updated(src["url"])}
 
 
 @router.post("/sources")

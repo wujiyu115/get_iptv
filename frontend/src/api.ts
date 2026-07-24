@@ -4,6 +4,8 @@ import type { Source, Alias, Template, Channel, TaskStatus, Schedule, Report } f
 const http = axios.create({ baseURL: '/api' });
 
 export const listSources = () => http.get<Source[]>('/sources').then(r => r.data);
+export const sourceGithubUpdated = (id: number) =>
+  http.get<{ id: number; updated: string | null }>(`/sources/${id}/github-updated`).then(r => r.data);
 export const createSource = (d: Partial<Source>) => http.post('/sources', d).then(r => r.data);
 export const updateSource = (id: number, d: Partial<Source>) => http.put(`/sources/${id}`, d).then(r => r.data);
 export const deleteSource = (id: number) => http.delete(`/sources/${id}`).then(r => r.data);

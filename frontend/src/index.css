@@ -389,7 +389,15 @@ select.inp option { background: var(--bg); color: var(--fg); }
   display: grid; place-items: center; }
 .overlay video { width: min(94vw,1100px); aspect-ratio: 16/9; max-height: 82vh;
   background: #000; border-radius: 12px; }
-.proxy-modal { width: min(92vw, 440px); }
+.proxy-modal {
+  width: min(92vw, 440px);
+  /* solid opaque surface like the report cards — no glass see-through over the
+     dark overlay */
+  background: var(--bg);
+  border: 1px solid var(--border);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .35);
+}
 
 /* ─── responsive ──────────────────────────────────────────────────── */
 @media (max-width: 767px) {
