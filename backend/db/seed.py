@@ -13,6 +13,10 @@ SEED_SOURCES = [
     ("yuechan-global", "https://raw.githubusercontent.com/YueChan/Live/main/Global.m3u", "m3u"),
     ("vbskycn-iptv4", "https://raw.githubusercontent.com/vbskycn/iptv/master/tv/iptv4.m3u", "m3u"),
     ("kimentanm-aptv", "https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u", "m3u"),
+    ("as-d-ipv4",
+     "https://raw.githubusercontent.com/AS-D/iptv-api/master/output/ipv4/result.m3u", "m3u"),
+    ("bestfan-cn-all",
+     "https://raw.githubusercontent.com/best-fan/iptv-sources/main/cn_all.m3u8", "m3u"),
 ]
 
 # (canonical, pattern, is_regex)

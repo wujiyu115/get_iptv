@@ -9,6 +9,20 @@ http://a/skip.m3u8
 http://a/2.m3u8
 '''
 
+# iptv-api 生成器头部的“更新时间”标记条目，频道名为时间戳
+IPTV_API_M3U = '''#EXTM3U
+#EXTINF:-1 tvg-name="CCTV1" group-title="🕘️更新时间",2025-05-26 06:16:51
+http://a/1.m3u8
+#EXTINF:-1 tvg-name="CCTV1" group-title="📺央视频道",CCTV-1
+http://a/1.m3u8
+'''
+
+IPTV_API_TXT = '''🕘️更新时间,#genre#
+2025-05-26 06:16:51,http://a/1.m3u8
+央视频道,#genre#
+CCTV-1,http://a/2.m3u8
+'''
+
 TXT = '''央视,#genre#
 CCTV1,http://a/1.m3u8
 CCTV2,http://a/2.m3u8
@@ -40,3 +54,13 @@ def test_parse_txt_genre():
 def test_parse_dispatch():
     assert len(parse(M3U, "m3u")) == 2
     assert len(parse(TXT, "txt")) == 3
+
+
+def test_parse_m3u_skips_update_time_marker():
+    es = parse_m3u(IPTV_API_M3U, source="s3")
+    assert len(es) == 1 and es[0].name == "CCTV-1"
+
+
+def test_parse_txt_skips_update_time_marker():
+    es = parse_txt(IPTV_API_TXT, source="s4")
+    assert len(es) == 1 and es[0].name == "CCTV-1"
