@@ -4,6 +4,7 @@ import type { Source } from '../types';
 import { Plus, Trash, Search } from '../icons';
 import { fmtLocal } from '../time';
 import HelpTip from './HelpTip';
+import { Select } from './Select';
 
 const BLANK = { name: '', url: '', type: 'm3u' as const };
 
@@ -111,10 +112,10 @@ export default function SourcesPanel() {
               <td data-label="URL" colSpan={2}><input className="inp" value={draft.url} placeholder="https://…"
                 onChange={e => setDraft({ ...draft, url: e.target.value })} /></td>
               <td colSpan={3}>
-                <select className="inp" style={{ maxWidth: 120 }} value={draft.type}
-                  onChange={e => setDraft({ ...draft, type: e.target.value as 'm3u' | 'txt' })}>
-                  <option value="m3u">m3u</option><option value="txt">txt</option>
-                </select></td>
+                <Select value={draft.type} ariaLabel="源类型" style={{ maxWidth: 120 }}
+                  onValueChange={v => setDraft({ ...draft, type: v as 'm3u' | 'txt' })}
+                  options={[{ value: 'm3u', label: 'm3u' }, { value: 'txt', label: 'txt' }]} />
+              </td>
               <td colSpan={3} style={{ textAlign: 'right' }}>
                 <button className="btn-icon-add" onClick={add} aria-label="添加源"><Plus /></button></td>
             </tr>

@@ -9,6 +9,7 @@
     "build:dev": "NODE_ENV=development rsbuild build"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.3.7",
     "axios": "^1.7.7",
     "hls.js": "^1.6.16",
     "mpegts.js": "^1.7.3",

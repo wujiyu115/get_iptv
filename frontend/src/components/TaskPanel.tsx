@@ -4,6 +4,7 @@ import type { Schedule } from '../types';
 import { Play } from '../icons';
 import { fmtLocal } from '../time';
 import HelpTip from './HelpTip';
+import { Select } from './Select';
 
 function LogLine({ raw }: { raw: string }) {
   const sp = raw.indexOf(' ');
@@ -83,11 +84,12 @@ export default function TaskPanel() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 18 }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>模式</span>
-                <select className="inp" value={sched.update_mode}
-                  onChange={e => setSched({ ...sched, update_mode: e.target.value as 'interval' | 'time' })}>
-                  <option value="interval">interval · 间隔小时</option>
-                  <option value="time">time · 每日定点</option>
-                </select>
+                <Select value={sched.update_mode} ariaLabel="调度模式"
+                  onValueChange={v => setSched({ ...sched, update_mode: v as 'interval' | 'time' })}
+                  options={[
+                    { value: 'interval', label: 'interval · 间隔小时' },
+                    { value: 'time', label: 'time · 每日定点' },
+                  ]} />
               </label>
               {sched.update_mode === 'interval' ? (
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
