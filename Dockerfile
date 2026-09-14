@@ -6,14 +6,22 @@ RUN bun install
 COPY frontend/ ./
 RUN bun run build
 
-# Stage 2: production
-FROM python:3.13-slim AS production
-WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# Stage 2: python deps — uv and its cache stay here, never reach the final image
+FROM python:3.13-alpine AS deps
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+WORKDIR /app
 COPY backend/requirements.txt ./
-RUN uv pip install --system -r requirements.txt
+# pytest is dev-only; the production image never runs tests
+RUN sed -i '/^pytest/d' requirements.txt \
+    && uv venv /opt/venv \
+    && uv pip install --python /opt/venv/bin/python -r requirements.txt
+
+# Stage 3: production — Alpine's ffmpeg is a fraction of Debian's dep tree
+FROM python:3.13-alpine
+RUN apk add --no-cache ffmpeg
+WORKDIR /app
+COPY --from=deps /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 COPY backend/ ./
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 ENV FRONTEND=/app/frontend/dist
