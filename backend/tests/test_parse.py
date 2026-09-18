@@ -64,3 +64,30 @@ def test_parse_m3u_skips_update_time_marker():
 def test_parse_txt_skips_update_time_marker():
     es = parse_txt(IPTV_API_TXT, source="s4")
     assert len(es) == 1 and es[0].name == "CCTV-1"
+
+
+MULTICAST = '''#EXTM3U
+#EXTINF:-1 group-title="央视",CCTV-1 综合
+rtp://239.3.1.129:8008
+#EXTINF:-1 group-title="央视",CCTV5 体育
+udp://239.77.0.170:5146
+'''
+
+MULTICAST_TXT = '''央视,#genre#
+CCTV-1 综合,rtp://239.3.1.129:8008
+CCTV5 体育,udp://239.77.0.170:5146
+'''
+
+
+def test_parse_m3u_keeps_rtp_multicast():
+    """rtp:// is IPTV multicast, as legitimate as udp://. Dropping it silently
+    emptied whole multicast-only sources (every entry discarded)."""
+    es = parse_m3u(MULTICAST, source="mc")
+    assert [e.url for e in es] == ["rtp://239.3.1.129:8008",
+                                   "udp://239.77.0.170:5146"]
+    assert es[1].name == "CCTV5 体育"
+
+
+def test_parse_txt_keeps_rtp_multicast():
+    es = parse_txt(MULTICAST_TXT, source="mc")
+    assert len(es) == 2 and es[0].url.startswith("rtp://")

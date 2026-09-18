@@ -24,7 +24,7 @@ def classify_body(code: int, content_type: str, body: bytes) -> str:
 
 def _check_one(e: Entry, timeout: int):
     if not e.url.startswith(_HTTP):
-        return e, "ok"  # rtmp/rtsp/udp bypass HTTP check
+        return e, "ok"  # rtmp/rtsp/udp/rtp bypass HTTP check
     try:
         with httpx.Client(timeout=timeout, verify=False, follow_redirects=True) as c:
             # stream + read only first chunk: live-stream URLs never end,

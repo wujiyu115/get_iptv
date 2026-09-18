@@ -5,7 +5,7 @@ from pipeline.models import Entry
 SKIP_NAMES = ["温馨提示", "免费订阅", "维护", "使用说明", "Github", "更新时间"]
 # iptv-api 生成器的“更新时间”标记条目，频道名是时间戳（如 2025-05-26 06:16:51）
 _DATE_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}")
-_URL_PREFIX = ("http://", "https://", "rtmp://", "rtsp://", "udp://")
+_URL_PREFIX = ("http://", "https://", "rtmp://", "rtsp://", "udp://", "rtp://")
 
 
 def _skip(name: str) -> bool:
