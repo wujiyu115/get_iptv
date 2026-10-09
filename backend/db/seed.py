@@ -105,6 +105,16 @@ SEED_SOURCES = [
     # workers=25 and workers=3, so that one is not a load artefact.)
     ("as-d-master",
      "https://raw.githubusercontent.com/AS-D/iptv-api/master/output/result.m3u", "m3u"),
+    # Verified 2026-10-09: all 40 URLs (single hotel IPTV host 101.66.199.13:9901)
+    # returned HTTP 200 with genuine #EXTM3U + .ts live bodies. TVBox txt format
+    # (#genre# groups), parsed by parse_txt. Small and heavily overlapping with
+    # the bigger seeds (CCTV1-15 + provincial satellites), so expect near-zero
+    # owned URLs after first-wins dedup — kept as a redundancy source: if the
+    # major seeds rot, this single-host feed is an independent fallback.
+    # The repo's udpxy/ multicast files are NOT seeded: user's network is not on
+    # an IPTV multicast VLAN (verified 2026-10-09, zero 239.77.x.x packets).
+    ("ssili126-tv",
+     "https://raw.githubusercontent.com/ssili126/tv/main/itvlist.txt", "txt"),
 ]
 
 # (canonical, pattern, is_regex)
