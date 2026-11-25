@@ -4,6 +4,7 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from pipeline.fetch import resolve_ua
 from pipeline.models import Entry, RunCancelled
 
 _PROBESIZE = 1_000_000  # bytes sampled; used to estimate speed
@@ -13,8 +14,10 @@ def ffprobe_available() -> bool:
     return shutil.which("ffprobe") is not None
 
 
-def build_cmd(url: str, timeout: int) -> list[str]:
-    return ["ffprobe", "-hide_banner", "-v", "error", "-user_agent", "Mozilla/5.0",
+def build_cmd(url: str, timeout: int, ua: str = "") -> list[str]:
+    # UA must match the entry: a hard-coded generic UA here silently rejected
+    # every URL that requires a specific one (migu live.php answers 404 to it).
+    return ["ffprobe", "-hide_banner", "-v", "error", "-user_agent", resolve_ua(ua),
             "-rw_timeout", str(int(timeout * 0.7 * 1_000_000)),
             "-analyzeduration", "1500000", "-probesize", str(_PROBESIZE),
             "-show_entries", "stream=codec_type,codec_name,width,height",
@@ -38,7 +41,7 @@ def parse_probe_json(out: str) -> tuple[str, int]:
 def _probe_one(e: Entry, timeout: int):
     t0 = time.monotonic()
     try:
-        r = subprocess.run(build_cmd(e.url, timeout), capture_output=True,
+        r = subprocess.run(build_cmd(e.url, timeout, e.ua), capture_output=True,
                            text=True, timeout=timeout)
         elapsed = time.monotonic() - t0
         detail, h = parse_probe_json(r.stdout)

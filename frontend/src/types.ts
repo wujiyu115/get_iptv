@@ -13,7 +13,7 @@ export interface Template {
 export interface Channel {
   id: number; name: string; group_title: string; url: string; logo: string;
   tvg_id: string; tvg_name: string; source: string; status: string;
-  detail: string; resolution: number; speed: number; delay: number;
+  detail: string; resolution: number; speed: number; delay: number; ua: string;
 }
 export interface TaskStatus {
   status: string; stage: string; run_id: number | null;

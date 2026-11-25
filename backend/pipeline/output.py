@@ -21,8 +21,12 @@ def _extinf(e: Entry, open_url_info: bool) -> str:
         if info:
             name = f"{name} ${'|'.join(info)}"
     group = e.group or "其他"
+    # Carry the required UA into the generated list: clients that understand the
+    # attribute (APTV/TiviMate/VLC) then play these URLs directly instead of
+    # getting the upstream's 404. Clients that ignore it behave as before.
+    ua = f' http-user-agent="{e.ua}"' if e.ua else ""
     return (f'#EXTINF:-1 tvg-id="{e.tvg_id}" tvg-name="{e.tvg_name or e.name}" '
-            f'tvg-logo="{e.logo}" group-title="{group}",{name}')
+            f'tvg-logo="{e.logo}" group-title="{group}"{ua},{name}')
 
 
 def _compact(entries: list[Entry]) -> list[Entry]:

@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import httpx
 
-from pipeline.fetch import DEFAULT_UA
+from pipeline.fetch import resolve_ua
 from pipeline.models import Entry, RunCancelled
 
 AD_KEYWORDS = ["广告", "占位", "advertisement", "sponsor"]
@@ -29,7 +29,8 @@ def _check_one(e: Entry, timeout: int):
         with httpx.Client(timeout=timeout, verify=False, follow_redirects=True) as c:
             # stream + read only first chunk: live-stream URLs never end,
             # so c.get() would download forever. Cap at 8 KB then close.
-            with c.stream("GET", e.url, headers={"User-Agent": DEFAULT_UA}) as r:
+            # Per-entry UA: mirror ffprobe/proxy, some hosts 404 otherwise.
+            with c.stream("GET", e.url, headers={"User-Agent": resolve_ua(e.ua)}) as r:
                 body = b""
                 for chunk in r.iter_bytes(8192):
                     body = chunk

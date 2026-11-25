@@ -91,3 +91,34 @@ def test_parse_m3u_keeps_rtp_multicast():
 def test_parse_txt_keeps_rtp_multicast():
     es = parse_txt(MULTICAST_TXT, source="mc")
     assert len(es) == 2 and es[0].url.startswith("rtp://")
+
+
+UA_M3U = '''#EXTM3U
+#EXTINF:-1 tvg-id="CCTV1" http-user-agent="AptvPlayer-UA" group-title="央视",CCTV1
+http://101.35.240.114:88/live.php?id=CCTV1
+#EXTINF:-1 user-agent="iPhone" group-title="央视",CCTV5
+http://101.35.240.114:88/live.php?id=CCTV5
+#EXTINF:-1 group-title="央视",CCTV6
+http://a/6.m3u8
+'''
+
+
+def test_parse_m3u_reads_http_user_agent():
+    """The migu live.php generator answers 404 to any UA but the one the feed
+    names; dropping the attribute made ffprobe reject whole channel groups."""
+    es = parse_m3u(UA_M3U, source="aptv")
+    assert [e.ua for e in es] == ["AptvPlayer-UA", "iPhone", ""]
+
+
+def test_parse_m3u_sanitizes_user_agent():
+    """A UA reaches HTTP headers, m3u output and ffmpeg argv: strip quotes and
+    control chars (header injection) and cap the length."""
+    from pipeline.parse import _clean_ua
+
+    assert _clean_ua('a"b\tc\rd') == "abcd"
+    assert _clean_ua("  iPhone  ") == "iPhone"
+    assert len(_clean_ua("u" * 500)) == 256
+    # a quoted UA cannot smuggle an extra attribute into the EXTINF line either
+    m = ('#EXTM3U\n#EXTINF:-1 http-user-agent="a\tb" group-title="g",X\n'
+         'http://a/1\n')
+    assert parse_m3u(m)[0].ua == "ab"

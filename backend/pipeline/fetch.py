@@ -3,6 +3,19 @@ import httpx
 DEFAULT_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
               "AppleWebKit/605.1.15")
 
+
+def resolve_ua(ua: str = "") -> str:
+    """Single place deciding which User-Agent a request uses: the entry's own
+    UA when the playlist specified one, else DEFAULT_UA.
+
+    Upstreams disagree about who may read them — the migu `live.php` generator
+    answers only iPhone/APTV UAs and returns 404 for a generic `Mozilla/5.0` —
+    so fetch, both check stages and the proxy must agree instead of each
+    hard-coding its own string.
+    """
+    return (ua or "").strip() or DEFAULT_UA
+
+
 # Responses smaller than this are treated as failures (empty/error pages).
 MIN_CONTENT_BYTES = 20
 

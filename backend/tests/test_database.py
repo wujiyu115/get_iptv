@@ -85,3 +85,33 @@ def test_seed_idempotent(tmp_path, monkeypatch):
     d.init_db()  # second call must not duplicate
     conn = d.get_conn()
     assert conn.execute("SELECT COUNT(*) c FROM sources").fetchone()["c"] == N_SEED
+
+
+def test_migrate_adds_ua_column_to_old_db(tmp_path, monkeypatch):
+    """An install created before the ua column existed must be upgraded in
+    place: schema.sql cannot alter an existing table, so init_db has to.
+    Without this every run would fail on the INSERT that names ua."""
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    c = sqlite3.connect(path)
+    c.executescript(
+        "CREATE TABLE channels (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "run_id INTEGER NOT NULL, name TEXT NOT NULL, group_title TEXT DEFAULT '', "
+        "url TEXT NOT NULL, logo TEXT DEFAULT '', tvg_id TEXT DEFAULT '', "
+        "tvg_name TEXT DEFAULT '', source TEXT DEFAULT '', status TEXT DEFAULT '', "
+        "detail TEXT DEFAULT '', resolution INTEGER DEFAULT 0, "
+        "speed REAL DEFAULT 0, delay REAL DEFAULT 0);")
+    c.execute("INSERT INTO channels(run_id,name,url) VALUES (1,'A','http://a/1')")
+    c.commit()
+    c.close()
+
+    monkeypatch.setenv("DB_PATH", str(path))
+    import db.database as d
+    importlib.reload(d)
+    d.init_db()
+    conn = d.get_conn()
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(channels)")}
+    assert "ua" in cols
+    # the pre-existing row survives and reads back as an empty UA
+    assert conn.execute("SELECT ua FROM channels WHERE name='A'").fetchone()["ua"] == ""

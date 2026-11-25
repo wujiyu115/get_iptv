@@ -37,3 +37,20 @@ def test_write_all(tmp_path):
     assert (tmp_path / "compact.m3u").exists()
     assert (tmp_path / "iptv.txt").exists()
     assert set(files) == {"full.m3u", "compact.m3u", "iptv.txt"}
+
+
+def test_full_m3u_carries_user_agent_and_round_trips():
+    """Downstream players (APTV/TiviMate) honour http-user-agent, so a direct
+    consumer of full.m3u plays UA-gated URLs; parsing our own output must give
+    the UA back."""
+    from pipeline.parse import parse_m3u
+
+    entries = [Entry(name="CCTV1", url="http://h/live.php?id=CCTV1",
+                     group="央视", ua="AptvPlayer-UA"),
+               Entry(name="CCTV2", url="http://h/2", group="央视")]
+    m = build_full_m3u(entries)
+    assert 'http-user-agent="AptvPlayer-UA"' in m
+    assert m.count("http-user-agent=") == 1  # only when set
+    back = parse_m3u(m)
+    assert [e.ua for e in back] == ["AptvPlayer-UA", ""]
+    assert [e.url for e in back] == [e.url for e in entries]

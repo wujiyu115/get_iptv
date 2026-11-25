@@ -46,7 +46,8 @@ CREATE TABLE IF NOT EXISTS channels (
   detail TEXT DEFAULT '',
   resolution INTEGER DEFAULT 0,
   speed REAL DEFAULT 0,
-  delay REAL DEFAULT 0
+  delay REAL DEFAULT 0,
+  ua TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_channels_run ON channels(run_id);
 CREATE TABLE IF NOT EXISTS settings (

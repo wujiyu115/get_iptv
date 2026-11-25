@@ -1,9 +1,11 @@
 from types import SimpleNamespace
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import routes.proxy as proxymod
+from pipeline.fetch import DEFAULT_UA
 from routes.proxy import _rewrite_m3u8
 
 
@@ -146,3 +148,92 @@ def test_partial_content_forwards_range_headers(monkeypatch):
     assert r.status_code == 206
     assert r.headers.get("content-range") == "bytes 0-187/100000"
     assert r.headers.get("accept-ranges") == "bytes"
+
+
+# --- per-entry UA passthrough -------------------------------------------------
+# A UA-gated upstream (migu live.php) answers 404 to the proxy's default UA, so
+# the entry's own UA has to reach both the request and every child segment.
+
+def _capturing_client(sink, body, ct):
+    class _FakeClient:
+        def __init__(self, *a, **k):
+            pass
+
+        def build_request(self, method, url, headers=None):
+            sink["headers"] = headers or {}
+            return SimpleNamespace(url=url)
+
+        async def send(self, req, stream=True):
+            return _FakeResp(req.url, body, ct)
+
+        async def aclose(self):
+            pass
+
+    return _FakeClient
+
+
+def test_proxy_forwards_entry_ua_and_propagates_to_segments(monkeypatch):
+    sink = {}
+    body = b"#EXTM3U\n#EXTINF:6,\nseg1.ts\n"
+    monkeypatch.setattr(proxymod.httpx, "AsyncClient",
+                        _capturing_client(sink, body, "application/vnd.apple.mpegurl"))
+    r = _client().get("/api/proxy",
+                      params={"url": "http://101.35.240.114:88/live.php?id=CCTV1",
+                              "ua": "AptvPlayer-UA"})
+    assert r.status_code == 200
+    assert sink["headers"]["User-Agent"] == "AptvPlayer-UA"
+    # child requests must keep the UA, else every segment 404s upstream
+    assert "ua=AptvPlayer-UA" in r.text
+
+
+def test_proxy_uses_default_ua_without_param(monkeypatch):
+    sink = {}
+    monkeypatch.setattr(proxymod.httpx, "AsyncClient",
+                        _capturing_client(sink, b"\x47" * 188, "video/mp2t"))
+    _client().get("/api/proxy", params={"url": "http://h/live/1.ts"})
+    assert sink["headers"]["User-Agent"] == DEFAULT_UA
+
+
+def test_rewrite_m3u8_carries_ua():
+    out = _rewrite_m3u8("#EXTM3U\n#EXTINF:6,\nseg1.ts\n",
+                        "http://host/live/index.m3u8", "iPhone")
+    assert "&ua=iPhone" in out
+
+
+@pytest.mark.parametrize("bad", [
+    "a\r\nX-Injected: 1",   # header injection
+    "a\nb",
+    "-oops",                # ffmpeg would parse it as an option
+    "u" * 300,              # absurdly long
+    "",
+])
+def test_safe_ua_rejects_unusable_values(bad):
+    assert proxymod.safe_ua(bad) == ""
+
+
+def test_safe_ua_keeps_normal_values():
+    assert proxymod.safe_ua("  AptvPlayer-UA  ") == "AptvPlayer-UA"
+    assert proxymod.safe_ua("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)") == \
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)"
+
+
+def test_restream_cmd_uses_entry_ua():
+    cmd = proxymod._ffmpeg_restream_cmd("http://h/x.m3u8", "AptvPlayer-UA")
+    assert cmd[cmd.index("-user_agent") + 1] == "AptvPlayer-UA"
+    assert proxymod._ffmpeg_restream_cmd("http://h/x.m3u8")[
+        proxymod._ffmpeg_restream_cmd("http://h/x.m3u8").index("-user_agent") + 1
+    ] == DEFAULT_UA
+
+
+def test_restream_route_passes_ua(monkeypatch):
+    seen = {}
+
+    async def _fake_exec(*a, **k):
+        seen["argv"] = list(a)
+        return _FakeProc()
+
+    monkeypatch.setattr(proxymod.shutil, "which", lambda n: "/usr/bin/ffmpeg")
+    monkeypatch.setattr(proxymod.asyncio, "create_subprocess_exec", _fake_exec)
+    _client().get("/api/restream",
+                  params={"url": "http://h/x.m3u8", "ua": "AptvPlayer-UA"})
+    assert seen["argv"][seen["argv"].index("-user_agent") + 1] == "AptvPlayer-UA"

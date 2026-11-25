@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { proxyUrl, restreamUrl } from '../api';
 
-interface Props { url: string; name: string; onClose: () => void; }
+interface Props { url: string; name: string; ua?: string; onClose: () => void; }
 
-export default function PlayerOverlay({ url, name, onClose }: Props) {
+export default function PlayerOverlay({ url, name, ua, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export default function PlayerOverlay({ url, name, onClose }: Props) {
     let cancelled = false;
     let fellBack = false;
     const video = videoRef.current!;
-    const src = proxyUrl(url);  // route through backend to dodge CORS/mixed-content
+    const src = proxyUrl(url, ua);  // route through backend to dodge CORS/mixed-content
     const isHls = /\.m3u8(\?|$)/i.test(url);
     const isTs = /\.(ts|flv)(\?|$)/i.test(url) || url.startsWith('mpegts');
 
@@ -35,7 +35,7 @@ export default function PlayerOverlay({ url, name, onClose }: Props) {
       try {
         const mpegts = (await import('mpegts.js')).default;
         if (cancelled || !mpegts.isSupported()) return;
-        player = mpegts.createPlayer({ type: 'mse', isLive: true, url: restreamUrl(url) });
+        player = mpegts.createPlayer({ type: 'mse', isLive: true, url: restreamUrl(url, ua) });
         player.attachMediaElement(video);
         player.load();
         tryPlay();
@@ -107,7 +107,7 @@ export default function PlayerOverlay({ url, name, onClose }: Props) {
       if (player) { try { player.destroy(); } catch { /* noop */ } }
       if (hls) { try { hls.destroy(); } catch { /* noop */ } }
     };
-  }, [url, onClose]);
+  }, [url, ua, onClose]);
 
   return (
     <div className="overlay" onClick={onClose}>

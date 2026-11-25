@@ -22,11 +22,24 @@ def get_conn() -> sqlite3.Connection:
     return conn
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Additive column migrations for DBs created by an older schema.
+
+    schema.sql only uses CREATE TABLE IF NOT EXISTS, so it never touches an
+    existing table; new columns have to be added explicitly or every query that
+    names them fails on an upgraded install.
+    """
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(channels)")}
+    if "ua" not in cols:
+        conn.execute("ALTER TABLE channels ADD COLUMN ua TEXT DEFAULT ''")
+
+
 def init_db(conn: sqlite3.Connection = None) -> None:
     own = conn is None
     conn = conn or get_conn()
     with open(_schema, "r", encoding="utf-8") as f:
         conn.executescript(f.read())
+    _migrate(conn)
     if conn.execute("SELECT COUNT(*) c FROM sources").fetchone()["c"] == 0:
         conn.executemany(
             "INSERT INTO sources(name,url,type) VALUES (?,?,?)", SEED_SOURCES)

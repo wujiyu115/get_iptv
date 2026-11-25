@@ -38,6 +38,8 @@ def parse_m3u(text: str, source: str = "") -> list[Entry]:
                 "group": _attr(line, "group-title"),
                 "tvg_id": _attr(line, "tvg-id"),
                 "tvg_name": _attr(line, "tvg-name"),
+                "ua": _clean_ua(_attr(line, "http-user-agent")
+                                or _attr(line, "user-agent")),
             }
         elif line.startswith(_URL_PREFIX) and cur is not None:
             if cur["name"] and not _skip(cur["name"]):
@@ -71,3 +73,12 @@ def parse(text: str, kind: str, source: str = "") -> list[Entry]:
 def _attr(line: str, key: str) -> str:
     m = re.search(key + r'="([^"]*)"', line)
     return m.group(1) if m else ""
+
+
+_UA_STRIP = re.compile(r'[\x00-\x1f\x7f"]')
+
+
+def _clean_ua(ua: str) -> str:
+    """UAs end up in HTTP headers, m3u attributes and ffmpeg argv, so drop
+    quotes/control chars and cap the length instead of trusting the feed."""
+    return _UA_STRIP.sub("", ua or "").strip()[:256]

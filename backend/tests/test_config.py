@@ -1,4 +1,4 @@
-import os, importlib
+import importlib
 
 def test_dotted_get_and_default(tmp_path, monkeypatch):
     cfg = tmp_path / "config.yaml"

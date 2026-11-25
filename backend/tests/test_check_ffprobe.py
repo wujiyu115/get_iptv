@@ -35,3 +35,37 @@ def test_build_cmd_has_json_and_url():
     assert cmd[0] == "ffprobe"
     assert "-of" in cmd and "json" in cmd
     assert cmd[-1] == "http://a/1.m3u8"
+
+
+def test_build_cmd_default_ua_matches_the_rest_of_the_pipeline():
+    """A hard-coded generic `Mozilla/5.0` here silently rejected every upstream
+    that gates on UA (migu live.php answers 404 to it) while check_http — which
+    uses DEFAULT_UA — called the same URL healthy."""
+    from pipeline.fetch import DEFAULT_UA, resolve_ua
+
+    cmd = build_cmd("http://a/1.m3u8", 10)
+    assert cmd[cmd.index("-user_agent") + 1] == DEFAULT_UA
+    assert resolve_ua("") == DEFAULT_UA
+
+
+def test_build_cmd_uses_entry_ua():
+    cmd = build_cmd("http://a/1.m3u8", 10, "AptvPlayer-UA")
+    assert cmd[cmd.index("-user_agent") + 1] == "AptvPlayer-UA"
+
+
+def test_probe_one_passes_entry_ua_to_ffprobe(monkeypatch):
+    seen = {}
+
+    class _Done:
+        stdout = '{"streams":[{"codec_type":"video","codec_name":"h264",' \
+                 '"width":1920,"height":1080}]}'
+        stderr = ""
+
+    def fake_run(cmd, **kw):
+        seen["cmd"] = cmd
+        return _Done()
+
+    monkeypatch.setattr(cf.subprocess, "run", fake_run)
+    e, ok = cf._probe_one(Entry(name="CCTV1", url="http://a/1", ua="AptvPlayer-UA"), 5)
+    assert ok and e.resolution == 1080
+    assert seen["cmd"][seen["cmd"].index("-user_agent") + 1] == "AptvPlayer-UA"

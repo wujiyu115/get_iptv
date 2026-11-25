@@ -27,13 +27,19 @@ def _sort_key(sort_by: str):
 
 
 def apply(entries: list[Entry], *, min_resolution: str = "", min_speed: float = 0.0,
-          sort_by: str = "resolution,speed", urls_limit: int = 0) -> list[Entry]:
+          sort_by: str = "resolution,speed", urls_limit: int = 0,
+          min_seg_kb: int = 0) -> list[Entry]:
     min_h = parse_resolution(min_resolution)
     kept = []
     for e in entries:
         if min_h and e.resolution and e.resolution < min_h:
             continue
         if min_speed and e.speed and e.speed < min_speed:
+            continue
+        # seg_kb==0 表示没测到（非 HLS / 探测失败 / 没开 segment probe），
+        # 一律放行，避免探测抖动误杀；只有「playlist 正常但分片明确报错」
+        # 才算死。
+        if min_seg_kb and (e.seg_dead or (e.seg_kb and e.seg_kb < min_seg_kb)):
             continue
         kept.append(e)
 

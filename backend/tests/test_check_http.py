@@ -40,3 +40,78 @@ def test_ad_endlist_short_loop():
 
 def test_ad_keyword():
     assert classify_body(200, "text/plain", "这是广告占位".encode()) == "ad"
+
+
+def test_check_one_sends_entry_ua(monkeypatch):
+    """HTTP check must use the same UA as ffprobe/proxy, else a UA-gated host
+    looks alive here and dead everywhere else."""
+    seen = {}
+
+    class _Resp:
+        status_code = 200
+        headers = {"content-type": "application/vnd.apple.mpegurl"}
+
+        def iter_bytes(self, n):
+            yield b"#EXTM3U\n#EXTINF:-1,A\nhttp://a/1\n"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    class _Client:
+        def __init__(self, *a, **k):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def stream(self, method, url, headers=None):
+            seen.update(headers or {})
+            return _Resp()
+
+    monkeypatch.setattr(ch.httpx, "Client", _Client)
+    e, status = ch._check_one(Entry(name="CCTV1", url="http://a/1", ua="AptvPlayer-UA"), 5)
+    assert status == "ok"
+    assert seen["User-Agent"] == "AptvPlayer-UA"
+
+
+def test_check_one_falls_back_to_default_ua(monkeypatch):
+    from pipeline.fetch import DEFAULT_UA
+
+    seen = {}
+
+    class _Resp:
+        status_code = 200
+        headers = {"content-type": "application/vnd.apple.mpegurl"}
+
+        def iter_bytes(self, n):
+            yield b"#EXTM3U\n#EXTINF:-1,A\nhttp://a/1\n"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    class _Client:
+        def __init__(self, *a, **k):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def stream(self, method, url, headers=None):
+            seen.update(headers or {})
+            return _Resp()
+
+    monkeypatch.setattr(ch.httpx, "Client", _Client)
+    ch._check_one(Entry(name="A", url="http://a/1"), 5)
+    assert seen["User-Agent"] == DEFAULT_UA

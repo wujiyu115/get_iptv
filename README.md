@@ -10,11 +10,14 @@
 
 - **多源聚合**：支持 m3u 与 txt 两种源格式，内置一批活跃的默认源。
 - **频道归一化**：通过别名（正则/精确）与模板统一频道名、分组、台标、排序。
+- **按条目的 UA**：读取 m3u 的 `http-user-agent`，检测、探测、入库、回填、播放全链路沿用同一个 UA（缺失则回落到默认 UA），并在输出的 m3u 里带回该属性。有些上游（如咪咕 `live.php` 生成器）只认特定 UA，其它一律 404。
 - **两级可用性检测**：
   - HTTP 检测（并发）——过滤死链、广告占位。
   - ffprobe 实际探流——确认可播放，识别分辨率/编码，估算速度与延迟。
+- **串播黑名单**：`filter.blocked_hosts` 按 (频道, 主机) 排除“名字对、内容不对”的源（CCTV5 在播 CCTV6 这类，探测层面看不出来），命中会在日志里写清理由；探测前生效，历史回填项同样过滤。
+- **首分片粗筛（可选）**：`check.segment_probe` 打开后，在 ffprobe 之前只拉 playlist + 首条分片，用 1.2 秒内拿到的 KB 数做吞吐下限、顺便从 playlist 补齐分辨率；`filter.min_seg_kb` 据此剔除拉不动分片的线路（默认关闭）。
 - **过滤排序**：按最低分辨率、最低速度、清晰度/速度排序，限制每频道 URL 数。
-- **历史合并**：本次未采到的频道可从上次成功结果回填，减少抖动。
+- **历史合并**：本次未采到的频道可从上次成功结果回填，减少抖动；默认先对回填项重检存活（`history_recheck`），避免把上一轮已过期的签名 URL 继续发布出去。
 - **定时更新**：`interval`（间隔小时）或 `time`（每日定点）两种调度模式。
 - **失效源自动禁用**：连续失效达阈值（5 次）自动停用；界面重新启用时自动清零计数。
 - **Web 管理界面**：源 / 别名 / 模板管理，任务运行与实时日志，频道搜索/分组/在线试播，运行报告。
@@ -117,18 +120,58 @@ check:
   ffprobe_enabled: true
   ffprobe_timeout: 10
   ffprobe_workers: 25
+  segment_probe: false      # 首分片粗筛（ffprobe 之前，见下）
+  segment_probe_timeout: 5
 filter:
   urls_limit: 5             # 每频道保留 URL 数（0=不限）
   min_resolution: 1280x720
   min_speed: 0.5
+  min_seg_kb: 0             # >0 才按首分片吞吐过滤（80 ≈ 死链下限，非画质门槛）
   sort_by: resolution,speed
   open_filter_ad: true
   open_history: true        # 历史回填
+  history_recheck: true     # 回填项先重检存活（钉死动态签名 URL 的过期问题）
+  blocked_hosts: {}         # 频道 -> {主机: 理由}，人工确认“串播/内容不符”后填写
 output:
   dir: ./output
 ```
 
 > 抓取用的 HTTP 代理不在此文件配置，改在界面「代理设置」里设置（存数据库，改后即时对下次抓取生效）。
+
+#### 串播黑名单 `filter.blocked_hosts`
+
+IPTV 里最坑的一类源不是死链，而是**名字对、内容不对** —— 标着 CCTV5 实际在播
+CCTV6，广东卫视挂成了山东台。这种地址在探测眼里是完美的（HTTP 200、合法
+m3u8、ffprobe 能出 1080p），只有人肉看画面才能发现，所以做成人工确认后落配置：
+
+```yaml
+filter:
+  blocked_hosts:
+    CCTV5:
+      183.250.156.180: 实测串播 CCTV6      # 映射写法：带理由
+      113.98.11.46: 实测串播 CCTV5+
+    CCTV13:
+      - ali-m-l.cztv.com                  # 列表写法：不带理由
+    CCTV9:
+      "*.bad-host.com": 整段主机都不对      # 支持通配子域
+```
+
+键是**规范化之后**的频道名（aliases/templates 跑完的名字），主机忽略端口、大小写、
+末尾点；命中即丢弃，并在运行日志里打印 `频道 @ 主机 — 理由`。规则在探测之前
+生效（不浪费探测预算），历史回填项也过一遍（规则可能是在上一次运行后才加的）。
+
+#### 首分片粗筛 `check.segment_probe` + `filter.min_seg_kb`
+
+仿 myTV 客户端的做法：不跑 ffmpeg，只拉一次 playlist（≤96 KB）+ 首条分片，
+看 `1.2 秒内能拿到多少 KB`，用这个数当吞吐/码率下限。实测 223 条记录 **6.8 秒**
+跑完（ffprobe 是 25 并发 × 10 秒的重活），适合做大范围初筛。
+
+- `check.segment_probe: false` 默认关闭（不额外发请求）；打开后才测。
+- `filter.min_seg_kb`：拿到 < N KB 或**分片明确报错（HTTP ≥ 400）**时剔除；
+  `0` = 不按此项过滤。超时/异常算“没测到”，一律放行，避免探测抖动误杀。
+- 顺手把 playlist 里声明的 `RESOLUTION` 填进 `resolution`，这样关掉 ffprobe 时
+  `min_resolution` 还有东西可判。
+- 它是**下限检测**，不是画质门槛：画质仍由 ffprobe + `min_resolution` 负责。
 
 ### 环境变量
 
@@ -186,7 +229,10 @@ cd backend && python -m pytest tests/ -q
 
 ```
 fetch → parse → normalize(aliases/templates) → dedup
-      → check_http → check_ffprobe → filter_sort → history merge
+      → block_hosts (可选，串播黑名单)
+      → check_http → segment probe (可选，首分片粗筛) → check_ffprobe
+      → filter_sort(min_resolution/min_speed/min_seg_kb)
+      → history recheck (可选) → history merge
       → output(m3u/txt) → source auto-disable
 ```
 

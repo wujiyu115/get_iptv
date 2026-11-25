@@ -17,13 +17,36 @@ check:
   ffprobe_enabled: true
   ffprobe_timeout: 10
   ffprobe_workers: 25
+  # cheap pre-screen: fetch playlist (<=96KB) + first segment (<=256KB) per URL
+  # and record seg_kb, before spending ffprobe time on it. Also fills
+  # resolution from the playlist's RESOLUTION attr when ffprobe is off.
+  segment_probe: false
+  segment_probe_timeout: 5
 filter:
   urls_limit: 5
   min_resolution: 1280x720
   min_speed: 0.5
+  # drop URLs whose first segment delivers less than N KB within
+  # segment_probe_timeout (80 = myTV's dead-link floor, not a quality gate).
+  # 0 disables; entries never measured (seg_kb==0) always pass.
+  min_seg_kb: 0
   sort_by: resolution,speed
   open_filter_ad: true
   open_history: true
+  # re-validate backfilled channels (http + ffprobe) instead of publishing the
+  # previous run's URLs blindly. Signed/token URLs expire within minutes, so a
+  # blind backfill keeps dead rows in the playlist forever.
+  history_recheck: true
+  # (channel, host) blacklist for sources that answer HTTP 200 with the WRONG
+  # channel ("CCTV5" playing CCTV6, provincial channels crossing over). Only a
+  # human watching the picture can find these; probes look perfect. Key is the
+  # normalized channel name, value is {host: reason} or a host list; `*.dom.tld`
+  # matches subdomains.
+  blocked_hosts: {}
+  # CCTV5:
+  #   183.250.156.180: 实测串播 CCTV6
+  # CCTV13:
+  #   - ali-m-l.cztv.com
 output:
   dir: ./output
   open_epg: true

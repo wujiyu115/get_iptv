@@ -102,7 +102,7 @@ export default function ChannelsPanel() {
         </div>
       </div>
 
-      {playing && <PlayerOverlay url={playing.url} name={playing.name}
+      {playing && <PlayerOverlay url={playing.url} name={playing.name} ua={playing.ua}
         onClose={() => setPlaying(null)} />}
     </>
   );
